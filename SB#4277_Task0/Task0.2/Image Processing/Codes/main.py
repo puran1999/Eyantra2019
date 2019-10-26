@@ -25,9 +25,8 @@ def partB():
 def partC():
     flowers = cv2.imread('../Images/flowers.jpg',1)
     B, G, R = cv2.split(flowers)
-    A = np.ones(R.shape, R.dtype)
+    A = 127*np.ones(R.shape, R.dtype)
     flowers = cv2.merge((B,G,R,A))
-    flowers[:,:,3]=0.5
     cv2.imwrite('../Generated/flowers_alpha.png',flowers)
 
 def partD():
