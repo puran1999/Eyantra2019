@@ -4,7 +4,6 @@ import os
 
 def partA():
     file = open('../Generated/stats.csv','w') 
-    i=0
     for x in os.listdir('../Images'):
         image = cv2.imread('../Images/'+str(x),1)
         rows, cols, ch = image.shape
@@ -12,7 +11,6 @@ def partA():
         c =int(cols/2)
         B, G, R = image[r,c,:]
         file.write(x+','+str(rows)+','+str(cols)+','+str(ch)+','+str(B)+','+str(G)+','+str(R)+'\n')
-        i=i+1
     file.close()
 
 def partB():
