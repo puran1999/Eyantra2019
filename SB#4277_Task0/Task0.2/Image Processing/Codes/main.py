@@ -1,13 +1,12 @@
 import cv2
 import numpy as np
 import os
-    
+
 def partA():
     file = open('../Generated/stats.csv','w') 
     i=0
     for x in os.listdir('../Images'):
         image = cv2.imread('../Images/'+str(x),1)
-        cv2.imshow(x,image)
         rows, cols, ch = image.shape
         r =int(rows/2)
         c =int(cols/2)
