@@ -14,5 +14,5 @@ Angle = 90 degree
 (As found by the hit and trial method)
 =========================================================================
 
-My progress of shortening the this code and hardcoding the 3 values
+My progress of shortening this code and hardcoding the 3 values
 is the code written in "deconvolution - modified.py"
