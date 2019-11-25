@@ -65,15 +65,12 @@ def process(ip_image):
 	for channel in channels:
 		i=i+1
 		channel = np.float32(channel)/255.0
-	#	cv2.imwrite(str(i)+'before_blur_edge_forchannel.jpg',channel * 255)
 		channel = blur_edge(channel) 
-	#	cv2.imwrite(str(i)+'blur_edge_for_channel.jpg',channel * 255)
 		IMG = cv2.dft(channel, flags=cv2.DFT_COMPLEX_OUTPUT)
 		ang = np.deg2rad( 90 ) #90
 		d = 20                 #20
 		noise = 10**(-0.1*25)  #25
 		psf = motion_kernel(ang, d)
-	#	cv2.imshow('psf', psf)
 		psf /= psf.sum()
 		psf_pad = np.zeros_like(channel)
 		kh, kw = psf.shape
@@ -86,21 +83,23 @@ def process(ip_image):
 		res = np.roll(res, -kh//2, 0)
 		res = np.roll(res, -kw//2, 1)
 		res = res*255.0
-#		cv2.imshow('output',res)
 		results.append(res)
-#		cv2.imwrite(str(i) + 'deconvuled_eyantra_perchannel.jpg',res * 255)
 	
 	ip_image = cv2.merge(results)
-	cv2.imwrite('bot.jpg',ip_image * 255)
+	cv2.imwrite('temp.jpg',ip_image * 255)
 	id_list = []
 	detect_aruco = {}
-	deconvulted = cv2.imread("bot.jpg")
+	deconvulted = cv2.imread("temp.jpg")
 	detect_aruco = detect_Aruco(deconvulted)
 	if detect_aruco:
 		img = mark_Aruco(deconvulted,detect_aruco)
 		robot_state = calculate_Robot_State(img,detect_aruco)
-#	id_list = calculate_Robot_State(deconvul
-	print(id_list)	
+		cv2.imwrite(generated_folder_path+"/"+'output.jpg',img)
+	id_list_nested = list(robot_state.values())
+	for sublist in id_list_nested:
+		for item in sublist:
+			id_list.append(item)
+	os.remove("temp.jpg")
 	return ip_image, id_list
 
 
