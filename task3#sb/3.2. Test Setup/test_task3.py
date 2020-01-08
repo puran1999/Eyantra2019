@@ -16,17 +16,28 @@ import csv
 import copy
 
 
-def find_correct_contours(contour):
+def find_correct_contours(contour, name, im_shape):
     detected = []
     for cont in contour:
         area = cv2.contourArea(cont)
         equi_diameter = np.sqrt(4*area/np.pi)
         center, radius = cv2.minEnclosingCircle(cont)
-        ratio = (2*radius-equi_diameter)/equi_diameter
+        try:
+            ratio = (2*radius-equi_diameter)/equi_diameter
+        except:
+            pass
         #print(ratio)
-        if 0.06 < ratio < 0.18:
-            detected.append(cont)
-            #print("detected")
+        if name == 'G' or name == 'R':
+            if 0.06 < ratio < 0.25 and 7 < equi_diameter < 15:  #9.5 to 12
+                detected.append(cont)
+                #print("detected")
+        elif name == 'W':
+            H, W, CH = im_shape
+            x, y = center
+            if 0.4*W < x < 0.6*W and 0.4*H < y < 0.6*H:
+                if 0.06 < ratio < 0.25 and  7< equi_diameter < 15:  #9.5 to 12
+                    detected.append(cont)
+                
     return detected
 
 def enquire(contourG, contourR, contourW):
@@ -64,6 +75,7 @@ def process(ip_image):
     ## Your Code goes here
     ###########################
     angle = -1
+    
     pic = cv2.cvtColor(ip_image, cv2.COLOR_BGR2HSV)
     
     LLG = (25, 62, 110)#GREEN HSV=(60,255,255)
@@ -81,9 +93,9 @@ def process(ip_image):
     contourR,h=cv2.findContours(maskR, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     contourW,h=cv2.findContours(maskW, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
-    contourG = find_correct_contours(contourG)
-    contourW = find_correct_contours(contourW)
-    contourR = find_correct_contours(contourR)
+    contourG = find_correct_contours(contourG, 'G', ip_image.shape)
+    contourW = find_correct_contours(contourW, 'W', ip_image.shape)
+    contourR = find_correct_contours(contourR, 'R', ip_image.shape)
 
     cv2.drawContours(ip_image, contourG, -1, (255, 0, 0), 2)
     cv2.drawContours(ip_image, contourR, -1, (255, 255, 0), 2)
