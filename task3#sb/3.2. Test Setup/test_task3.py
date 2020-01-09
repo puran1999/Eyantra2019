@@ -4,6 +4,12 @@
 ## Instructions: Do Not modify the basic skeletal structure of given APIs!!!
 ###############################################################################
 
+###############################################################################
+## References:
+## Trackbar to find threshholding values: https://github.com/opencv/opencv/blob/master/samples/python/tutorial_code/imgProc/threshold_inRange/threshold_inRange.py
+## Centre Detection: https://www.pyimagesearch.com/2016/02/01/opencv-center-of-contour/
+## Angle Calculation: https://medium.com/@manivannan_data/find-the-angle-between-three-points-from-2d-using-python-348c513e2cd 
+###############################################################################
 
 ######################
 ## Essential libraries
@@ -15,7 +21,10 @@ import math
 import csv
 import copy
 
-
+###################################################
+## Function to pick the required contours from the 
+## detected ones.
+###################################################
 def find_correct_contours(contour, name, im_shape):
     detected = []
     for cont in contour:
@@ -26,20 +35,23 @@ def find_correct_contours(contour, name, im_shape):
             ratio = (2*radius-equi_diameter)/equi_diameter
         except:
             pass
-        #print(ratio)
         if name == 'G' or name == 'R':
             if 0.06 < ratio < 0.25 and 7 < equi_diameter < 15:  #9.5 to 12
                 detected.append(cont)
-                #print("detected")
         elif name == 'W':
             H, W, CH = im_shape
             x, y = center
             if 0.4*W < x < 0.6*W and 0.4*H < y < 0.6*H:
-                if 0.06 < ratio < 0.25 and  7< equi_diameter < 15:  #9.5 to 12
+                if 0.06 < ratio < 0.25 and  7 < equi_diameter < 15:  #9.5 to 12
                     detected.append(cont)
-                
     return detected
 
+
+##########################################
+## Function to check if all the required 
+## contours for finding angle are present 
+## or not
+##########################################
 def enquire(contourG, contourR, contourW):
     res = 1
     if not contourG:
@@ -54,14 +66,15 @@ def enquire(contourG, contourR, contourW):
     return res
     
 
+#######################
+## Function to get 
+## centre of contour
+#######################
 def get_centre(contour):
     M = cv2.moments(contour)
     cX = int(M["m10"] / M["m00"])
     cY = int(M["m01"] / M["m00"])
     return [cX, cY]
-
-
-
 
 
 ############################################
@@ -98,41 +111,12 @@ def process(ip_image):
     contourR = find_correct_contours(contourR, 'R', ip_image.shape)
 
     cv2.drawContours(ip_image, contourG, -1, (255, 0, 0), 2)
-    cv2.drawContours(ip_image, contourR, -1, (255, 255, 0), 2)
-    cv2.drawContours(ip_image, contourW, -1, (0, 255, 255), 2)
-
+    cv2.drawContours(ip_image, contourR, -1, (255, 0, 0), 2)
 
     if enquire(contourG, contourR, contourW):
         cG = get_centre(contourG[0])
         cR = get_centre(contourR[0])
         cW = get_centre(contourW[0])
-        '''
-        cG, rG = cv2.minEnclosingCircle(contourG[0])
-        cR, rR = cv2.minEnclosingCircle(contourR[0])
-        cW, rW = cv2.minEnclosingCircle(contourW[0])
-        
-        mG = (cG[0]-cW[0])/(cG[1]-cW[1])
-        mR = (cR[0]-cW[0])/(cR[1]-cW[1])
-        aG = math.degrees(math.atan(mG))
-        aR = math.degrees(math.atan(mR))
-        if cG[1]>cW[1]:
-            aG=180+aG
-        if cR[1]>cW[1]:
-            aR=180+aR
-        if aG > 180:
-            aG=aG-360
-        if aR > 180:
-            aR=aR-360
-        #print(aG, aR)
-        if aG > aR:
-            angle = aG-aR
-        if aR > aG:
-            angle = aR-aG
-        angle = abs(angle)
-        if angle > 180:
-            angle = 360-angle
-        angle = round(angle,2)
-        '''
         angle = math.degrees(math.atan2(cG[1]-cW[1], cG[0]-cW[0]) - math.atan2(cR[1]-cW[1], cR[0]-cW[0]))
         if angle < 0:
             angle = angle + 360
@@ -140,8 +124,6 @@ def process(ip_image):
             angle = 360 - angle
         angle = round(angle,2)
         ip_image = cv2.putText(ip_image, "Angle: " + str(angle), (20,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
-    else:
-        print("One of three contour not found")
     cv2.imshow("Result", ip_image)
     op_image = ip_image
     return op_image
@@ -178,8 +160,6 @@ def main():
         op_image = process(frame)
         cv2.imwrite("SB#4277_task3I.jpg",op_image)
 
-
-    
 
 ############################################################################################
 ## main function
