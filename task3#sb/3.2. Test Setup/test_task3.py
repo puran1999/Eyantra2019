@@ -21,6 +21,12 @@ import math
 import csv
 import copy
 
+# Module to calculate standard deviation
+import statistics
+
+# List to store values of angles obtained
+angles = []
+
 ###################################################
 ## Function to pick the required contours from the 
 ## detected ones.
@@ -88,7 +94,7 @@ def process(ip_image):
     ## Your Code goes here
     ###########################
     angle = -1
-    
+     
     pic = cv2.cvtColor(ip_image, cv2.COLOR_BGR2HSV)
     
     LLG = (25, 62, 110)#GREEN HSV=(60,255,255)
@@ -125,6 +131,7 @@ def process(ip_image):
         angle = round(angle,2)
         ip_image = cv2.putText(ip_image, "Angle: " + str(angle), (20,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
     cv2.imshow("Result", ip_image)
+    angles.append(angle)
     op_image = ip_image
     return op_image
     
@@ -159,6 +166,11 @@ def main():
         ## calling the algorithm function
         op_image = process(frame)
         cv2.imwrite("SB#4277_task3I.jpg",op_image)
+        if len(angles) >= 10:
+            if statistics.stdev(angles) < 1:
+                break
+            else:
+                angles.pop(0) 
 
 
 ############################################################################################
