@@ -32,9 +32,9 @@ angles = []
 ## Function to pick the required contours from the 
 ## detected ones.
 ###################################################
-LLG = (37, 62, 0)#GREEN HSV=(60,255,255)
+LLG = (25, 62, 110)#GREEN HSV=(60,255,255)
 ULG = (76, 255, 255)
-LLR = ( 160, 160, 0)#RED HSV=(0,255,255)
+LLR = ( 164, 150, 150)#RED HSV=(0,255,255)
 ULR = ( 180, 255, 255)
 LLW = ( 0, 0, 170)#WHITE HSV=(0,0,255)
 ULW = ( 180, 50, 255)
@@ -84,16 +84,20 @@ def find_correct_contours(contour, name, im_shape):
 ## contours for finding angle are present 
 ## or not
 ##########################################
-def enquire(contourG, contourR, contourW):
-    res = 1
-    #if not contourG:
-        #print("Green not found")
-        #res = 0
-    #if not contourR:
-        #print("Red not found")
-        #res = 0
+def enquire_white(contourW):
     if not contourW:
         print("White not found")
+        return 0
+    else:
+        return 1
+
+def enquire(contourG, contourR):
+    res = 1
+    if not contourG:
+        print("Green not found")
+        res = 0
+    if not contourR:
+        print("Red not found")
         res = 0
     return res
     
@@ -126,7 +130,7 @@ def calculate_angle(pt1, pt2, centre):
     if angle < 0:
         angle = angle + 360
     if angle > 180:
-        angle = 360 - angle
+        angle = angle - 360
     angle = round(angle,2)
     return angle
 
@@ -185,9 +189,8 @@ def process(ip_image):
     cv2.drawContours(ip_image, contourG, -1, (255, 0, 0), 2)
     cv2.drawContours(ip_image, contourR, -1, (255, 0, 0), 2)
 
-    if enquire(contourG, contourR, contourW):
-        #cG = get_centre(contourG[0])
-        #cR = get_centre(contourR[0])
+    if enquire_white(contourW):
+        
         cW = get_centre(contourW[0])
         xw, yw = tuple(cW)
         #cv2.circle(ip_image,(xw, yw),140,(0,255,0),1)
@@ -204,12 +207,24 @@ def process(ip_image):
                 cv2.circle(ip_image,tuple(node),1,(0,0,255),2)
                 if len(aruco_centre) > 0:
                     node_angle = calculate_angle(node, aruco_centre, cW)
-                    if node_angle > 10:
+                    if abs(node_angle) > 10:
                         node_angles.append(node_angle)
                         ip_image = cv2.putText(ip_image, str(node_angle), tuple(node), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
-        #angle = calculate_angle(cG, cR, cW)
-
-        #ip_image = cv2.putText(ip_image, "Angle: " + str(angle), (20,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+        if enquire(contourG, contourR):
+            cG = []
+            cR = []
+            for cont in contourG:
+                cG.append(get_centre(cont))
+            for cont in contourR:
+                cR.append(get_centre(cont))
+            
+            if len(aruco_centre) > 0:
+                for centre in cG:
+                    angleG = calculate_angle(centre, aruco_centre, cW)
+                    ip_image = cv2.putText(ip_image, str(angleG), tuple(centre), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+                for centre in cR:
+                    angleR = calculate_angle(centre, aruco_centre, cW)
+                    ip_image = cv2.putText(ip_image, str(angleR), tuple(centre), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
     cv2.imshow("Result", ip_image)
     #angles.append(angle)
     op_image = ip_image
