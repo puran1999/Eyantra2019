@@ -15,6 +15,7 @@ import math
 import csv
 
 
+from aruco_lib import *
 
 
 ########################################################################
@@ -84,9 +85,12 @@ def enquire(contourG, contourR, contourW):
 
 def get_centre(contour):
     M = cv2.moments(contour)
-    cX = int(M["m10"] / M["m00"])
-    cY = int(M["m01"] / M["m00"])
-    return [cX, cY]
+    try:
+        cX = int(M["m10"] / M["m00"])
+        cY = int(M["m01"] / M["m00"])
+        return [cX, cY]
+    except ZeroDivisionError:
+        pass
 
 def is_inside(OuterContour, InnerContour):
     inside = []
@@ -127,6 +131,16 @@ def get_nodes(pic):
     contourW,hW = cv2.findContours(maskW, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     return contourW
 
+def calculate_angle(pt1, pt2, centre):
+    angle = math.degrees(math.atan2(pt1[1] - centre[1], pt1[0] - centre[0]) -
+    math.atan2(pt2[1] - centre[1], pt2[0] - centre[0]))
+    if angle < 0:
+        angle = angle + 360
+    if angle > 180:
+        angle = 360 - angle
+    angle = round(angle,2)
+    return angle
+
 ############################################
 ## Build your algorithm in this function
 ## ip_image: is the array of the input image
@@ -158,17 +172,22 @@ def process(ip_image):
     contourW = find_correct_contours(contourW, 'IW', ip_image.shape)
     contourR = find_correct_contours(contourR, 'R', ip_image.shape)
    
-#    contourG = find_approx_contour(contourG)
-#    contourB = find_approx_contour(contourB)
-#    contourP = find_approx_contour(contourP)
-#    contourR = find_approx_contour(contourR)
-
-#    contourP = get_largest_contour(contourP)
-#    contourB = get_largest_contour(contourB)
+    det_aruco_list = detect_Aruco(ip_image)
+    print(det_aruco_list)
+    aruco_centre = []
+    if det_aruco_list:
+        aruco_id = det_aruco_list.keys()
+        for aid in aruco_id:
+            corners = det_aruco_list.get(aid)
+        cv2.circle(ip_image,tuple(corners[0]),1,(0,255,255),2)
+        cv2.circle(ip_image,tuple(corners[1]),1,(255,0,255),2)
+        robot_state = calculate_Robot_State(ip_image,det_aruco_list)
+        keys = robot_state.keys()
+        for key in keys:
+            aruco_data = robot_state.get(key)
+            aruco_centre = aruco_data[1:3]
+            print(aruco_centre)
     
-#    contourG = is_inside(contourP, contourG)
-#    contourR = is_inside(contourP, contourR)
-
     cv2.drawContours(ip_image, contourG, -1, (255, 0, 0), 2)
     cv2.drawContours(ip_image, contourR, -1, (255, 255, 0), 2)
     cv2.drawContours(ip_image, contourW, -1, (0, 255, 255), 2)
@@ -186,43 +205,20 @@ def process(ip_image):
         xw, yw = tuple(cW)
         ip_image = cv2.line(ip_image,(xw,yw),(xw,yw),(0,0,255),2)
         contOW = find_correct_contours(copyW, 'OW', cW)
-        cv2.drawContours(ip_image, contOW, -1, (0, 0, 255), 2)
-#        node = []
-#        node_list = []
-#        i = 0
-#        for cont in contOW:
-#            for point in cont:
-#                x, y = tuple(point[0])
-#                dist = math.sqrt( (x - xw)**2 + (y - yw)**2 )
-#                if dist > 195:
-#                    ip_image = cv2.line(ip_image,tuple(point.tolist()[0]),tuple(point.tolist()[0]),(0,0,255),2)
-#                    node.append(point.tolist()[0])
-##                    print(node)
-#                else:
-#                    node_list.append(node)
-#                    del node[:]
-                #print(dist)
-#        print(node_list)
-#        node_list = np.array(node_list, dtype = 'int32')
-#        print(node_list)
-#        cv2.drawContours(ip_image, node_list, -1, (0, 0, 255), 2)
-#        scale = 200
-#        H, W = cW
-#        cord1 = int(W - scale)
-#        cord2 = int(W + scale)
-#        cord3 = int(H - scale)
-#        cord4 = int(H + scale)
-#        ip_image = cv2.line(ip_image,(cord3, cord1),(cord3, cord1),(255,0,0),5)
-#        ip_image = cv2.line(ip_image,(cord3, cord2),(cord3, cord2),(255,0,0),5)
-#        ip_image = cv2.line(ip_image,(cord4, cord1),(cord4, cord1),(255,0,0),5)
-#        ip_image = cv2.line(ip_image,(cord4, cord2),(cord4, cord2),(255,0,0),5)
- 
-        angle = math.degrees(math.atan2(cG[1]-cW[1], cG[0]-cW[0]) - math.atan2(cR[1]-cW[1], cR[0]-cW[0]))
-        if angle < 0:
-            angle = angle + 360
-        if angle > 180:
-            angle = 360 - angle
-        angle = round(angle,2)
+#        cv2.drawContours(ip_image, contOW, -1, (0, 0, 255), 2)
+        node_centers = []
+        node_angles = []
+        for cont in contOW:
+            node_centers.append(get_centre(cont))
+        for node in node_centers:
+            if node != None:
+                cv2.circle(ip_image,tuple(node),1,(0,0,255),2)
+                if len(aruco_centre) > 0:
+                    node_angle = calculate_angle(node, aruco_centre, cW)
+                    if node_angle > 10:
+                        node_angles.append(node_angle)
+                        ip_image = cv2.putText(ip_image, str(node_angle), tuple(node), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+        angle = calculate_angle(cG, cR, cW)
         ip_image = cv2.putText(ip_image, "Angle: " + str(angle), (20,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
      
     cv2.imshow("window", ip_image) 
