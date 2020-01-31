@@ -36,8 +36,8 @@ LLG = (37, 62, 0)#GREEN HSV=(60,255,255)
 ULG = (76, 255, 255)
 LLR = ( 160, 160, 0)#RED HSV=(0,255,255)
 ULR = ( 180, 255, 255)
-LLW = ( 0, 0, 167)#WHITE HSV=(0,0,255)
-ULW = ( 180, 71, 255)
+LLW = ( 0, 0, 170)#WHITE HSV=(0,0,255)
+ULW = ( 180, 50, 255)
 #    LLO = (161, 103, 0)
 #    ULO = (180, 255, 255) 
 LLP = (122, 67, 109)
@@ -67,13 +67,14 @@ def find_correct_contours(contour, name, im_shape):
         elif name == 'OW':
             inner = 50
             outer = 245
-            reqd_dist = 160
-            H, W = tuple(im_shape)
-            x, y = tuple(cont[0][0])
-            dist = math.sqrt((x - W)**2 + (y - H)**2)
-            if W - outer < x < W + outer and H - outer < y < H + outer:
-                if dist > reqd_dist:
-                    detected.append(cont)
+            dist_min = 140
+            dist_max = 240
+            X, Y = tuple(im_shape)
+            x, y = tuple(get_centre(cont))
+            dist = math.sqrt((x - X)**2 + (y - Y)**2)
+            #if W - outer < x < W + outer and H - outer < y < H + outer:
+            if dist_max > dist > dist_min:
+                detected.append(cont)
 
     return detected
 
@@ -85,12 +86,12 @@ def find_correct_contours(contour, name, im_shape):
 ##########################################
 def enquire(contourG, contourR, contourW):
     res = 1
-    if not contourG:
-        print("Green not found")
-        res = 0
-    if not contourR:
-        print("Red not found")
-        res = 0
+    #if not contourG:
+        #print("Green not found")
+        #res = 0
+    #if not contourR:
+        #print("Red not found")
+        #res = 0
     if not contourW:
         print("White not found")
         res = 0
@@ -108,11 +109,11 @@ def get_centre(contour):
         cY = int(M["m01"] / M["m00"])
         return [cX, cY]
     except ZeroDivisionError:
-        pass
+        return [0,0]
 
 def get_nodes(pic):
     erosion_size = 3
-    erosion_type = cv2.MORPH_ELLIPSE
+    erosion_type = cv2.MORPH_CROSS
     element = cv2.getStructuringElement(erosion_type, (2*erosion_size + 1, 2*erosion_size+1), (erosion_size, erosion_size))
     erosion_dst = cv2.erode(pic, element)
     maskW = cv2.inRange(erosion_dst, LLW, ULW)
@@ -185,13 +186,15 @@ def process(ip_image):
     cv2.drawContours(ip_image, contourR, -1, (255, 0, 0), 2)
 
     if enquire(contourG, contourR, contourW):
-        cG = get_centre(contourG[0])
-        cR = get_centre(contourR[0])
+        #cG = get_centre(contourG[0])
+        #cR = get_centre(contourR[0])
         cW = get_centre(contourW[0])
         xw, yw = tuple(cW)
+        #cv2.circle(ip_image,(xw, yw),140,(0,255,0),1)
+        #cv2.circle(ip_image,(xw, yw),240,(0,255,0),1)
         ip_image = cv2.line(ip_image,(xw,yw),(xw,yw),(0,0,255),2)
         contOW = find_correct_contours(copyW, 'OW', cW)
-#        cv2.drawContours(ip_image, contOW, -1, (0, 0, 255), 2)
+        #cv2.drawContours(ip_image, contOW, -1, (0, 0, 255), 2)
         node_centers = []
         node_angles = []
         for cont in contOW:
@@ -204,11 +207,11 @@ def process(ip_image):
                     if node_angle > 10:
                         node_angles.append(node_angle)
                         ip_image = cv2.putText(ip_image, str(node_angle), tuple(node), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
-        angle = calculate_angle(cG, cR, cW)
+        #angle = calculate_angle(cG, cR, cW)
 
-        ip_image = cv2.putText(ip_image, "Angle: " + str(angle), (20,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+        #ip_image = cv2.putText(ip_image, "Angle: " + str(angle), (20,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
     cv2.imshow("Result", ip_image)
-    angles.append(angle)
+    #angles.append(angle)
     op_image = ip_image
     return op_image
     
@@ -243,11 +246,11 @@ def main():
         ## calling the algorithm function
         op_image = process(frame)
         cv2.imwrite("SB#4277_task3I.jpg",op_image)
-        if len(angles) >= 10:
-            if statistics.stdev(angles) < 1:
-                break
-            else:
-                angles.pop(0) 
+        #if len(angles) >= 10:
+            #if statistics.stdev(angles) < 1:
+               #break
+            #else:
+                #angles.pop(0) 
 
 
 ############################################################################################
