@@ -190,7 +190,6 @@ def process(ip_image):
     cv2.drawContours(ip_image, contourR, -1, (255, 0, 0), 2)
 
     if enquire_white(contourW):
-        
         cW = get_centre(contourW[0])
         xw, yw = tuple(cW)
         #cv2.circle(ip_image,(xw, yw),140,(0,255,0),1)
@@ -199,7 +198,9 @@ def process(ip_image):
         contOW = find_correct_contours(copyW, 'OW', cW)
         #cv2.drawContours(ip_image, contOW, -1, (0, 0, 255), 2)
         node_centers = []
-        node_angles = []
+        pos_node_angles = {}
+        neg_node_angles = {}
+        nodes = defaultdict(list)
         for cont in contOW:
             node_centers.append(get_centre(cont))
         for node in node_centers:
@@ -208,16 +209,65 @@ def process(ip_image):
                 if len(aruco_centre) > 0:
                     node_angle = calculate_angle(node, aruco_centre, cW)
                     if abs(node_angle) > 10:
-                        node_angles.append(node_angle)
-                        ip_image = cv2.putText(ip_image, str(node_angle), tuple(node), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
-        if enquire(contourG, contourR):
-            cG = []
-            cR = []
+                        if node_angle > 0:
+                            pos_node_angles[node_angle] = node
+                        else:
+                            neg_node_angles[node_angle] = node
+                        #ip_image = cv2.putText(ip_image, str(node_angle), tuple(node), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+        node_num = len(nodes)
+        for angle, centre in sorted(pos_node_angles.items()):
+            node_num = node_num + 1
+            nodes[node_num].append(centre)
+            nodes[node_num].append(angle)
+        node_num = len(nodes)
+        for angle, centre in sorted(neg_node_angles.items()):
+            node_num = node_num + 1
+            nodes[node_num].append(centre)
+            nodes[node_num].append(angle)
+        for num, data in nodes.items():
+            ip_image = cv2.putText(ip_image, str(num), tuple(data[0]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+            red_nodes = []
+            green_nodes = []
             for cont in contourG:
                 cG.append(get_centre(cont))
             for cont in contourR:
                 cR.append(get_centre(cont))
-            
+            for centre in cR:
+                min_dist = 0
+                red_node = 0
+                for num, data in nodes.items():
+                    dist = math.sqrt((centre[0] - data[0][0])**2 + (centre[1] -
+                    data[0][1])**2)
+                    if num == 1:
+                        min_dist = dist
+                        red_node = num
+                    elif dist < min_dist:
+                        red_node = num
+                        min_dist = dist
+                    #print(str(num) + ":" + str(dist))
+                red_nodes.append(red_node)
+
+            for node in red_nodes:
+                print("Medical supply at: " + str(node))
+
+            for centre in cG:
+                min_dist = 0
+                green_node = 0
+                for num, data in nodes.items():
+                    dist = math.sqrt((centre[0] - data[0][0])**2 + (centre[1] -
+                    data[0][1])**2)
+                    if num == 1:
+                        min_dist = dist
+                        green_node = num
+                    elif dist < min_dist:
+                        green_node = num
+                        min_dist = dist
+                    #print(str(num) + ":" + str(dist))
+                green_nodes.append(green_node)
+
+            for node in green_nodes:
+                print("Food supply at: " + str(node))
+           
             if len(aruco_centre) > 0:
                 for centre in cG:
                     angleG = calculate_angle(centre, aruco_centre, cW)
