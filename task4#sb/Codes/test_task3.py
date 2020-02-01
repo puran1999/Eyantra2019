@@ -24,6 +24,7 @@ import copy
 # Module to calculate standard deviation
 import statistics
 from aruco_lib import *
+from collections import defaultdict
 
 # List to store values of angles obtained
 angles = []
