@@ -227,6 +227,10 @@ def process(ip_image):
             nodes[node_num].append(angle)
         for num, data in nodes.items():
             ip_image = cv2.putText(ip_image, str(num), tuple(data[0]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+
+        if enquire(contourG, contourR):
+            cG = []
+            cR = []
             red_nodes = []
             green_nodes = []
             for cont in contourG:
