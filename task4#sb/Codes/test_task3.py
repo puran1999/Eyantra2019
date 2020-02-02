@@ -66,14 +66,11 @@ def find_correct_contours(contour, name, im_shape):
                 if 0.06 < ratio < 0.25 and  7 < equi_diameter < 15:  #9.5 to 12
                     detected.append(cont)
         elif name == 'OW':
-            inner = 50
-            outer = 245
             dist_min = 140
-            dist_max = 240
+            dist_max = 220
             X, Y = tuple(im_shape)
             x, y = tuple(get_centre(cont))
             dist = math.sqrt((x - X)**2 + (y - Y)**2)
-            #if W - outer < x < W + outer and H - outer < y < H + outer:
             if dist_max > dist > dist_min:
                 detected.append(cont)
 
@@ -148,7 +145,7 @@ def process(ip_image):
     contourR = find_correct_contours(contourR, 'R', ip_image.shape)
 
     det_aruco_list = detect_Aruco(ip_image)
-    print(det_aruco_list)
+    #print(det_aruco_list)
     aruco_centre = []
     if det_aruco_list:
         aruco_id = det_aruco_list.keys()
@@ -161,7 +158,7 @@ def process(ip_image):
         for key in keys:
             aruco_data = robot_state.get(key)
             aruco_centre = aruco_data[1:3]
-            print(aruco_centre)
+            #print(aruco_centre)
     else:
         print("ArUCO not found!!!")
  
@@ -172,7 +169,7 @@ def process(ip_image):
         cW = get_centre(contourW[0])
         xw, yw = tuple(cW)
         #cv2.circle(ip_image,(xw, yw),140,(0,255,0),1)
-        #cv2.circle(ip_image,(xw, yw),240,(0,255,0),1)
+        #cv2.circle(ip_image,(xw, yw),220,(0,255,0),1)
         ip_image = cv2.line(ip_image,(xw,yw),(xw,yw),(0,0,255),2)
         contOW = find_correct_contours(copyW, 'OW', cW)
         #cv2.drawContours(ip_image, contOW, -1, (0, 0, 255), 2)
@@ -289,21 +286,21 @@ def process(ip_image):
             for node, data in red_nodes_data.items():
                 if angle == abs(data[1]):
                     node_seq.append(node)
-        if len(red_angle_seq) > 0:
-            last_red = red_angle_seq[-1]
+        if len(node_seq) > 0:
+            last_red = red_nodes_data[node_seq[-1]][1]
+            print(last_red)
             for node, data in green_nodes_data.items():
-                if last_red > 0:
-                    if data[1] > 0 or abs(data[1]) < 90:
-                        green_angle_seq[round(abs(last_red - data[1]), 2)] = node
-                    elif abs(data[1]) > 90: 
-                        green_angle_seq[round(abs(last_red + data[1]), 2)] = node
-                else:
-                    if data[1] < 0 or abs(data[1]) < 90:
-                        green_angle_seq[round(abs(last_red - data[1]), 2)] = node
-                    elif abs(data[1]) > 90: 
-                        green_angle_seq[round(abs(last_red + data[1]), 2)] = node
+                if (last_red > 0 and data[1] > 0) or (last_red < 0 and data[1] < 0):
+                    green_angle_seq[round(abs(abs(last_red) - abs(data[1])), 2)] = node
+                elif (last_red > 0 and data[1] < 0) or (last_red < 0 and data[1] > 0):
+                    diff = round(abs(last_red) + abs(data[1]), 2)
+                    if diff > 180:
+                        green_angle_seq[round(360 - diff, 2)] = node
+                    else: 
+                        green_angle_seq[round(diff, 2)] = node
             print(green_angle_seq)
-
+            for angle, node in sorted(green_angle_seq.items()):
+                node_seq.append(node)
         else:
             green_angle_seq = []
             for node, data in green_nodes_data.items():
@@ -315,9 +312,9 @@ def process(ip_image):
                     if angle == abs(data[1]):
                         node_seq.append(node)
 
-        for angle, node in sorted(green_angle_seq.items()):
-            node_seq.append(node)
+        
         print(node_seq)
+        print("#######################################")
 
     else:
         print("White centre not found!!!")
