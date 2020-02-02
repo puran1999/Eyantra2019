@@ -319,7 +319,19 @@ def process(ip_image):
                         green_angle_seq[round(abs(last_red + data[1]), 2)] = node
                    
             print(green_angle_seq)
-        for angle, node in sorted(green_angle_seq.items()):
+
+         else:
+            green_angle_seq = []
+            for node, data in green_nodes_data.items():
+                green_angle_seq.append(abs(data[1]))
+            green_angle_seq.sort()
+            print(green_angle_seq)
+            for angle in green_angle_seq:
+                for node, data in green_nodes_data.items():
+                    if angle == abs(data[1]):
+                        node_seq.append(node)
+
+       for angle, node in sorted(green_angle_seq.items()):
             node_seq.append(node)
         print(node_seq)
         
