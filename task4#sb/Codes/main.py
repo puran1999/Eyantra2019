@@ -13,7 +13,7 @@ import numpy as np
 import os
 import math
 import csv
-
+from collections import defaultdict
 
 from aruco_lib import *
 
@@ -25,12 +25,12 @@ codes_folder_path = os.path.abspath('.')
 images_folder_path = os.path.abspath(os.path.join('..', 'Images'))
 generated_folder_path = os.path.abspath(os.path.join('..', 'Generated'))
 count = 0
-LLG = (37, 62, 0)#GREEN HSV=(60,255,255)
+LLG = (25, 62, 110)#GREEN HSV=(60,255,255)
 ULG = (76, 255, 255)
-LLR = ( 160, 160, 0)#RED HSV=(0,255,255)
+LLR = ( 164, 150, 150)#RED HSV=(0,255,255)
 ULR = ( 180, 255, 255)
-LLW = ( 0, 0, 167)#WHITE HSV=(0,0,255)
-ULW = ( 180, 71, 255)
+LLW = ( 0, 0, 170)#WHITE HSV=(0,0,255)
+ULW = ( 180, 50, 255)
 #    LLO = (161, 103, 0)
 #    ULO = (180, 255, 255) 
 LLP = (122, 67, 109)
@@ -60,28 +60,16 @@ def find_correct_contours(contour, name, im_shape):
         elif name == 'OW':
             inner = 50
             outer = 245
-            reqd_dist = 160
-            H, W = tuple(im_shape)
-            x, y = tuple(cont[0][0])
-            dist = math.sqrt((x - W)**2 + (y - H)**2)
-            if W - outer < x < W + outer and H - outer < y < H + outer:
-                if dist > reqd_dist:
-                    detected.append(cont)
+            dist_min = 140
+            dist_max = 240
+            X, Y = tuple(im_shape)
+            x, y = tuple(get_centre(cont))
+            dist = math.sqrt((x - X)**2 + (y - Y)**2)
+            #if W - outer < x < W + outer and H - outer < y < H + outer:
+            if dist_max > dist > dist_min:
+                detected.append(cont)
 
     return detected
-
-def enquire(contourG, contourR, contourW):
-    res = 1
-    if not contourG:
-        print("Green not found")
-        res = 0
-    if not contourR:
-        print("Red not found")
-        res = 0
-    if not contourW:
-        print("White not found")
-        res = 0
-    return res
 
 def get_centre(contour):
     M = cv2.moments(contour)
@@ -90,7 +78,7 @@ def get_centre(contour):
         cY = int(M["m01"] / M["m00"])
         return [cX, cY]
     except ZeroDivisionError:
-        pass
+        return [0,0]
 
 def is_inside(OuterContour, InnerContour):
     inside = []
@@ -124,7 +112,7 @@ def get_largest_contour(contour):
 
 def get_nodes(pic):
     erosion_size = 3
-    erosion_type = cv2.MORPH_ELLIPSE
+    erosion_type = cv2.MORPH_CROSS
     element = cv2.getStructuringElement(erosion_type, (2*erosion_size + 1, 2*erosion_size+1), (erosion_size, erosion_size))
     erosion_dst = cv2.erode(pic, element)
     maskW = cv2.inRange(erosion_dst, LLW, ULW)
@@ -137,7 +125,7 @@ def calculate_angle(pt1, pt2, centre):
     if angle < 0:
         angle = angle + 360
     if angle > 180:
-        angle = 360 - angle
+        angle = angle - 360
     angle = round(angle,2)
     return angle
 
@@ -153,7 +141,6 @@ def process(ip_image):
     angle = -1
     pic = cv2.cvtColor(ip_image, cv2.COLOR_BGR2HSV)
 
-#
     maskG = cv2.inRange(pic, LLG, ULG)
     maskR = cv2.inRange(pic, LLR, ULR)
     maskW = cv2.inRange(pic, LLW, ULW)
@@ -173,7 +160,6 @@ def process(ip_image):
     contourR = find_correct_contours(contourR, 'R', ip_image.shape)
    
     det_aruco_list = detect_Aruco(ip_image)
-    print(det_aruco_list)
     aruco_centre = []
     if det_aruco_list:
         aruco_id = det_aruco_list.keys()
@@ -186,7 +172,6 @@ def process(ip_image):
         for key in keys:
             aruco_data = robot_state.get(key)
             aruco_centre = aruco_data[1:3]
-            print(aruco_centre)
     
     cv2.drawContours(ip_image, contourG, -1, (255, 0, 0), 2)
     cv2.drawContours(ip_image, contourR, -1, (255, 255, 0), 2)
@@ -198,30 +183,150 @@ def process(ip_image):
 #        if hier[3] != -1 and hier[2] == -1:
 #            print(hier)
 #            cv2.drawContours(ip_image, cont, -1, (255, 0, 255), 2)
-    if enquire(contourG, contourR, contourW):
-        cG = get_centre(contourG[0])
-        cR = get_centre(contourR[0])
+    if len(contourW) > 0:
         cW = get_centre(contourW[0])
         xw, yw = tuple(cW)
+        #cv2.circle(ip_image,(xw, yw),140,(0,255,0),1)
+        #cv2.circle(ip_image,(xw, yw),240,(0,255,0),1)
         ip_image = cv2.line(ip_image,(xw,yw),(xw,yw),(0,0,255),2)
         contOW = find_correct_contours(copyW, 'OW', cW)
-#        cv2.drawContours(ip_image, contOW, -1, (0, 0, 255), 2)
+        #cv2.drawContours(ip_image, contOW, -1, (0, 0, 255), 2)
         node_centers = []
-        node_angles = []
+        pos_node_angles = {}
+        neg_node_angles = {}
+        nodes = defaultdict(list)
+        green_nodes_data = defaultdict(list)
+        red_nodes_data = defaultdict(list)
         for cont in contOW:
             node_centers.append(get_centre(cont))
         for node in node_centers:
             if node != None:
-                cv2.circle(ip_image,tuple(node),1,(0,0,255),2)
+                #cv2.circle(ip_image,tuple(node),1,(0,0,255),2)
                 if len(aruco_centre) > 0:
                     node_angle = calculate_angle(node, aruco_centre, cW)
-                    if node_angle > 10:
-                        node_angles.append(node_angle)
-                        ip_image = cv2.putText(ip_image, str(node_angle), tuple(node), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
-        angle = calculate_angle(cG, cR, cW)
-        ip_image = cv2.putText(ip_image, "Angle: " + str(angle), (20,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
-     
-    cv2.imshow("window", ip_image) 
+                    if abs(node_angle) > 10:
+                        if node_angle > 0:
+                            pos_node_angles[node_angle] = node
+                        else:
+                            neg_node_angles[node_angle] = node
+                        #ip_image = cv2.putText(ip_image, str(node_angle), tuple(node), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+        #pos_node_angles.sort()
+        #neg_node_angles.sort()
+        node_num = len(nodes)
+        for angle, centre in sorted(pos_node_angles.items()):
+            node_num = node_num + 1
+            nodes[node_num].append(centre)
+            nodes[node_num].append(angle)
+        node_num = len(nodes)
+        for angle, centre in sorted(neg_node_angles.items()):
+            node_num = node_num + 1
+            nodes[node_num].append(centre)
+            nodes[node_num].append(angle)
+        for num, data in nodes.items():
+            ip_image = cv2.putText(ip_image, str(num), tuple(data[0]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+
+        if len(contourR) > 0:
+            cR = []
+            red_nodes = []
+            for cont in contourR:
+                cR.append(get_centre(cont))
+            for centre in cR:
+                min_dist = 0
+                red_node = 0
+                for num, data in nodes.items():
+                    dist = math.sqrt((centre[0] - data[0][0])**2 + (centre[1] -
+                    data[0][1])**2)
+                    if num == 1:
+                        min_dist = dist
+                        red_node = num
+                    elif dist < min_dist:
+                        red_node = num
+                        min_dist = dist
+                    #print(str(num) + ":" + str(dist))
+                red_nodes.append(red_node)
+            
+            for node in red_nodes:
+                print("Medical supply at: " + str(node))
+                for num, data in sorted(nodes.items()):
+                    if num == node:
+                        red_nodes_data[num] = data
+                        
+            print(red_nodes_data) 
+            if len(aruco_centre) > 0:
+                for centre in cR:
+                    angleR = calculate_angle(centre, aruco_centre, cW)
+                    ip_image = cv2.putText(ip_image, str(angleR), tuple(centre), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+        else:
+            print("Red coins not found!!!")
+
+        if len(contourG) > 0:
+            cG = []
+            green_nodes = []
+            for cont in contourG:
+                cG.append(get_centre(cont))
+            for centre in cG:
+                min_dist = 0
+                green_node = 0
+                for num, data in nodes.items():
+                    dist = math.sqrt((centre[0] - data[0][0])**2 + (centre[1] -
+                    data[0][1])**2)
+                    if num == 1:
+                        min_dist = dist
+                        green_node = num
+                    elif dist < min_dist:
+                        green_node = num
+                        min_dist = dist
+                    #print(str(num) + ":" + str(dist))
+                green_nodes.append(green_node)
+
+            for node in green_nodes:
+                print("Food supply at: " + str(node))
+                for num, data in sorted(nodes.items()):
+                    if num == node:
+                        green_nodes_data[num] = data
+                        
+            print(green_nodes_data) 
+            if len(aruco_centre) > 0:
+                for centre in cG:
+                    angleG = calculate_angle(centre, aruco_centre, cW)
+                    ip_image = cv2.putText(ip_image, str(angleG), tuple(centre), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+        else:
+            print("Green coins not found!!!")
+
+        node_seq = []
+        red_angle_seq = []
+        green_angle_seq = defaultdict(int)
+        for node, data in red_nodes_data.items():
+            red_angle_seq.append(abs(data[1]))
+        red_angle_seq.sort()
+        print(red_angle_seq)
+        for angle in red_angle_seq:
+            for node, data in red_nodes_data.items():
+                if angle == abs(data[1]):
+                    node_seq.append(node)
+        if len(red_angle_seq) > 0:
+            last_red = red_angle_seq[-1]
+            for node, data in green_nodes_data.items():
+                if last_red > 0:
+                    if data[1] > 0 or abs(data[1]) < 90:
+                        green_angle_seq[round(abs(last_red - data[1]), 2)] = node
+                    elif abs(data[1]) > 90: 
+                        green_angle_seq[round(abs(last_red + data[1]), 2)] = node
+                else:
+                    if data[1] < 0 or abs(data[1]) < 90:
+                        green_angle_seq[round(abs(last_red - data[1]), 2)] = node
+                    elif abs(data[1]) > 90: 
+                        green_angle_seq[round(abs(last_red + data[1]), 2)] = node
+                   
+            print(green_angle_seq)
+        for angle, node in sorted(green_angle_seq.items()):
+            node_seq.append(node)
+        print(node_seq)
+        
+    else:
+        print("White centre not found!!!")
+
+    cv2.imshow("Result", ip_image)
     cv2.waitKey(0);
     cv2.imwrite("../Generated/generated" + str(count + 1) + ".jpg", ip_image)
     ## Your Code goes here
