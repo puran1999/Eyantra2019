@@ -210,8 +210,8 @@ def process(ip_image):
                         else:
                             neg_node_angles[node_angle] = node
                         #ip_image = cv2.putText(ip_image, str(node_angle), tuple(node), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
-        #pos_node_angles.sort()
-        #neg_node_angles.sort()
+        nodes[1].append(aruco_centre)
+        nodes[1].append(0.0)
         node_num = len(nodes)
         for angle, centre in sorted(pos_node_angles.items()):
             node_num = node_num + 1
@@ -294,6 +294,7 @@ def process(ip_image):
             print("Green coins not found!!!")
 
         node_seq = []
+        node_seq.append(1)
         red_angle_seq = []
         green_angle_seq = defaultdict(int)
         for node, data in red_nodes_data.items():
@@ -304,23 +305,22 @@ def process(ip_image):
             for node, data in red_nodes_data.items():
                 if angle == abs(data[1]):
                     node_seq.append(node)
-        if len(red_angle_seq) > 0:
-            last_red = red_angle_seq[-1]
+        if len(node_seq) > 0:
+            last_red = red_nodes_data[node_seq[-1]][1]
+            print(last_red)
             for node, data in green_nodes_data.items():
-                if last_red > 0:
-                    if data[1] > 0 or abs(data[1]) < 90:
-                        green_angle_seq[round(abs(last_red - data[1]), 2)] = node
-                    elif abs(data[1]) > 90: 
-                        green_angle_seq[round(abs(last_red + data[1]), 2)] = node
-                else:
-                    if data[1] < 0 or abs(data[1]) < 90:
-                        green_angle_seq[round(abs(last_red - data[1]), 2)] = node
-                    elif abs(data[1]) > 90: 
-                        green_angle_seq[round(abs(last_red + data[1]), 2)] = node
-                   
+                if (last_red > 0 and data[1] > 0) or (last_red < 0 and data[1] < 0):
+                    green_angle_seq[round(abs(abs(last_red) - abs(data[1])), 2)] = node
+                elif (last_red > 0 and data[1] < 0) or (last_red < 0 and data[1] > 0):
+                    diff = round(abs(last_red) + abs(data[1]), 2)
+                    if diff > 180:
+                        green_angle_seq[round(360 - diff, 2)] = node
+                    else: 
+                        green_angle_seq[round(diff, 2)] = node
             print(green_angle_seq)
-
-         else:
+            for angle, node in sorted(green_angle_seq.items()):
+                node_seq.append(node)
+        else:
             green_angle_seq = []
             for node, data in green_nodes_data.items():
                 green_angle_seq.append(abs(data[1]))
@@ -330,11 +330,25 @@ def process(ip_image):
                 for node, data in green_nodes_data.items():
                     if angle == abs(data[1]):
                         node_seq.append(node)
-
-       for angle, node in sorted(green_angle_seq.items()):
-            node_seq.append(node)
-        print(node_seq)
         
+        node_seq.append(1)
+        print(node_seq)
+
+        command_seq = []
+        i = 1
+        while i < len(node_seq):
+            src = node_seq[i - 1]
+            dest = node_seq[i]
+            diff = dest - src
+            if abs(diff) < 5:
+                command_seq.append(diff)
+            else:
+                command_seq.append(abs(diff) - 9)
+            i = i + 1
+
+        print(command_seq)
+        print("#######################################")
+
     else:
         print("White centre not found!!!")
 

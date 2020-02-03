@@ -314,6 +314,20 @@ def process(ip_image):
 
         
         print(node_seq)
+        command_seq = []
+        i = 1
+        while i < len(node_seq):
+            src = node_seq[i - 1]
+            dest = node_seq[i]
+            diff = dest - src
+            if abs(diff) < 5:
+                command_seq.append(diff)
+            else:
+                command_seq.append(abs(diff) - 9)
+            i = i + 1
+
+        print(command_seq)
+
         print("#######################################")
 
     else:
