@@ -276,6 +276,7 @@ def process(ip_image):
         else:
             print("Green coins not found!!!")
         node_seq = []
+        node_seq.append(1)
         red_angle_seq = []
         green_angle_seq = defaultdict(int)
         for node, data in red_nodes_data.items():
@@ -312,7 +313,7 @@ def process(ip_image):
                     if angle == abs(data[1]):
                         node_seq.append(node)
 
-        
+        node_seq.append(1)
         print(node_seq)
         command_seq = []
         i = 1
