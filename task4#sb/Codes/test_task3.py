@@ -1,10 +1,4 @@
 ###############################################################################
-## Author: Team Supply Bot
-## Edition: eYRC 2019-20
-## Instructions: Do Not modify the basic skeletal structure of given APIs!!!
-###############################################################################
-
-###############################################################################
 ## References:
 ## Trackbar to find threshholding values: https://github.com/opencv/opencv/blob/master/samples/python/tutorial_code/imgProc/threshold_inRange/threshold_inRange.py
 ## Centre Detection: https://www.pyimagesearch.com/2016/02/01/opencv-center-of-contour/
@@ -21,31 +15,21 @@ import math
 import csv
 import copy
 
-# Module to calculate standard deviation
-import statistics
 from aruco_lib import *
 from collections import defaultdict
+from port_detection import *
 
-# List to store values of angles obtained
-angles = []
+LLG = (25, 62, 110)
+ULG = (76, 255, 255)
+LLR = ( 164, 150, 150)
+ULR = ( 180, 255, 255)
+LLW = ( 0, 0, 170)
+ULW = ( 180, 50, 255)
 
 ###################################################
 ## Function to pick the required contours from the 
 ## detected ones.
 ###################################################
-LLG = (25, 62, 110)#GREEN HSV=(60,255,255)
-ULG = (76, 255, 255)
-LLR = ( 164, 150, 150)#RED HSV=(0,255,255)
-ULR = ( 180, 255, 255)
-LLW = ( 0, 0, 170)#WHITE HSV=(0,0,255)
-ULW = ( 180, 50, 255)
-#    LLO = (161, 103, 0)
-#    ULO = (180, 255, 255) 
-LLP = (122, 67, 109)
-ULP = (151, 135, 255) 
-#    LLB = (104, 44, 169)
-#    ULB = (121, 118, 255) 
-
 def find_correct_contours(contour, name, im_shape):
     detected = []
     for cont in contour:
@@ -57,13 +41,13 @@ def find_correct_contours(contour, name, im_shape):
         except:
             pass
         if name == 'G' or name == 'R':
-            if 0.06 < ratio < 0.25 and 7 < equi_diameter < 15:  #9.5 to 12
+            if 0.06 < ratio < 0.25 and 7 < equi_diameter < 15: 
                 detected.append(cont)
         elif name == 'IW':
             H, W, CH = im_shape
             x, y = center
             if 0.4*W < x < 0.6*W and 0.4*H < y < 0.6*H:
-                if 0.06 < ratio < 0.25 and  7 < equi_diameter < 15:  #9.5 to 12
+                if 0.06 < ratio < 0.25 and  7 < equi_diameter < 15:
                     detected.append(cont)
         elif name == 'OW':
             dist_min = 140
@@ -123,13 +107,6 @@ def process(ip_image):
      
     pic = cv2.cvtColor(ip_image, cv2.COLOR_BGR2HSV)
     
-#    LLG = (25, 62, 110)#GREEN HSV=(60,255,255)
-#    ULG = (76, 255, 255)
-#    LLR = ( 164, 150, 150)#RED HSV=(0,255,255)
-#    ULR = ( 180, 255, 255)
-#    LLW = ( 0, 0, 0)#WHITE HSV=(0,0,255)
-#    ULW = ( 180, 41, 255)
-    
     maskG = cv2.inRange(pic, LLG, ULG)
     maskR = cv2.inRange(pic, LLR, ULR)
     maskW = cv2.inRange(pic, LLW, ULW)
@@ -148,12 +125,13 @@ def process(ip_image):
     #print(det_aruco_list)
     aruco_centre = []
     if det_aruco_list:
-        aruco_id = det_aruco_list.keys()
-        for aid in aruco_id:
-            corners = det_aruco_list.get(aid)
-        cv2.circle(ip_image,tuple(corners[0]),1,(0,255,255),2)
-        cv2.circle(ip_image,tuple(corners[1]),1,(255,0,255),2)
+        #aruco_id = det_aruco_list.keys()
+        #for aid in aruco_id:
+            #corners = det_aruco_list.get(aid)
+        #cv2.circle(ip_image,tuple(corners[0]),1,(0,255,255),2)
+        #cv2.circle(ip_image,tuple(corners[1]),1,(255,0,255),2)
         robot_state = calculate_Robot_State(ip_image,det_aruco_list)
+        ip_image = mark_Aruco(ip_image, det_aruco_list)
         keys = robot_state.keys()
         for key in keys:
             aruco_data = robot_state.get(key)
@@ -276,7 +254,7 @@ def process(ip_image):
         else:
             print("Green coins not found!!!")
         node_seq = []
-        node_seq.append(1)
+        #node_seq.append(1)
         red_angle_seq = []
         green_angle_seq = defaultdict(int)
         for node, data in red_nodes_data.items():
@@ -313,8 +291,9 @@ def process(ip_image):
                     if angle == abs(data[1]):
                         node_seq.append(node)
 
-        node_seq.append(1)
-        print(node_seq)
+        #node_seq.append(1)
+        #print(node_seq)
+        '''
         command_seq = []
         i = 1
         while i < len(node_seq):
@@ -330,14 +309,14 @@ def process(ip_image):
         print(command_seq)
 
         print("#######################################")
-
+        '''
     else:
         print("White centre not found!!!")
 
     cv2.imshow("Result", ip_image)
     #angles.append(angle)
-    op_image = ip_image
-    return op_image
+    #op_image = ip_image
+    return node_seq
     
     
 ####################################################################
@@ -361,21 +340,29 @@ def main():
     ## reading in the frame
     ret, frame = cap.read()
     ## verifying frame has content
-    print(frame.shape)
+    #print(frame.shape)
     while(ret):
         ret, frame = cap.read()
         ## display to see if the frame is correct
         #cv2.imshow("window", frame)
         cv2.waitKey(int(1000/fps));
         ## calling the algorithm function
-        op_image = process(frame)
-        cv2.imwrite("SB#4277_task3I.jpg",op_image)
-        #if len(angles) >= 10:
-            #if statistics.stdev(angles) < 1:
-               #break
-            #else:
-                #angles.pop(0) 
-
+        node_seq = process(frame)
+        print(node_seq)
+        ports = serial_ports()
+        for port in ports:
+            try:
+                s = serial.Serial(port)
+                for node in node_seq:
+                    num = 0
+                    while num < 500:
+                        s.write(str(node).encode("utf-8"))
+                    print(str(node) + "sent to Bot")
+                    response = s.read(1)
+                s.close()
+            except (OSError, serial.SerialException):
+                pass
+            
 
 ############################################################################################
 ## main function
