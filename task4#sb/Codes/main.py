@@ -16,7 +16,7 @@ import csv
 from collections import defaultdict
 
 from aruco_lib import *
-
+from port_detection import *
 
 ########################################################################
 ## using os to generalise Input-Output
@@ -168,6 +168,7 @@ def process(ip_image):
         cv2.circle(ip_image,tuple(corners[0]),1,(0,255,255),2)
         cv2.circle(ip_image,tuple(corners[1]),1,(255,0,255),2)
         robot_state = calculate_Robot_State(ip_image,det_aruco_list)
+        ip_image = mark_Aruco(ip_image, det_aruco_list)
         keys = robot_state.keys()
         for key in keys:
             aruco_data = robot_state.get(key)
@@ -186,8 +187,8 @@ def process(ip_image):
     if len(contourW) > 0:
         cW = get_centre(contourW[0])
         xw, yw = tuple(cW)
-        #cv2.circle(ip_image,(xw, yw),140,(0,255,0),1)
-        #cv2.circle(ip_image,(xw, yw),240,(0,255,0),1)
+        cv2.circle(ip_image,(xw, yw),140,(0,255,0),1)
+        cv2.circle(ip_image,(xw, yw),240,(0,255,0),1)
         ip_image = cv2.line(ip_image,(xw,yw),(xw,yw),(0,0,255),2)
         contOW = find_correct_contours(copyW, 'OW', cW)
         #cv2.drawContours(ip_image, contOW, -1, (0, 0, 255), 2)
@@ -294,7 +295,7 @@ def process(ip_image):
             print("Green coins not found!!!")
 
         node_seq = []
-        node_seq.append(1)
+        #node_seq.append(1)
         red_angle_seq = []
         green_angle_seq = defaultdict(int)
         for node, data in red_nodes_data.items():
@@ -331,9 +332,9 @@ def process(ip_image):
                     if angle == abs(data[1]):
                         node_seq.append(node)
         
-        node_seq.append(1)
-        print(node_seq)
-
+        #node_seq.append(1)
+        #print(node_seq)
+        '''
         command_seq = []
         i = 1
         while i < len(node_seq):
@@ -348,16 +349,16 @@ def process(ip_image):
 
         print(command_seq)
         print("#######################################")
-
+        '''
     else:
         print("White centre not found!!!")
 
     cv2.imshow("Result", ip_image)
     cv2.waitKey(0);
-    cv2.imwrite("../Generated/generated" + str(count + 1) + ".jpg", ip_image)
+    #cv2.imwrite("../Generated/generated" + str(count + 1) + ".jpg", ip_image)
     ## Your Code goes here
     ###########################
-    return angle
+    return node_seq
 
 
 ####################################################################
@@ -381,7 +382,24 @@ def main():
         ## verifying image has content
         print(ip_image.shape)
         ## passing read in image to process function
-        A = process(ip_image)
+        node_seq = process(ip_image)
+        print(node_seq)
+        ports = serial_ports()
+        print(ports)
+        for port in ports:
+            try:
+                s = serial.Serial(port)
+                for node in node_seq:
+                    num = 0
+                    while num < 500:
+                        s.write(str(node).encode("utf-8"))
+                    print(str(node) + "sent to Bot")
+                    response = s.read(1)
+                s.close()
+            except (OSError, serial.SerialException):
+                pass
+
+        '''
         ## saving the output in  a list variable
         line.append([str(i), image_name , str(A)])
         ## incrementing counter variable
@@ -394,6 +412,7 @@ def main():
         writer.writerows(line)
     ## closing csv file    
     writeFile.close()
+    '''
 
 
 
