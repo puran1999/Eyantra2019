@@ -1,8 +1,10 @@
+##############################################################################
+## Team SB#4277
 ###############################################################################
 ## References:
-## Trackbar to find threshholding values: https://github.com/opencv/opencv/blob/master/samples/python/tutorial_code/imgProc/threshold_inRange/threshold_inRange.py
-## Centre Detection: https://www.pyimagesearch.com/2016/02/01/opencv-center-of-contour/
-## Angle Calculation: https://medium.com/@manivannan_data/find-the-angle-between-three-points-from-2d-using-python-348c513e2cd 
+## ArUCO Detection: aruco_lib provided by Eyantra Team
+## Erosion: https://github.com/opencv/opencv/blob/3.4/samples/python/tutorial_code/imgProc/erosion_dilatation/morphology_1.py 
+## Pyserial: https://pythonhosted.org/pyserial/index.html 
 ###############################################################################
 
 ######################
@@ -10,15 +12,19 @@
 ######################
 import cv2
 import numpy as np
-import os
+#import os
 import math
-import csv
-import copy
+#import csv
+#import copy
+import time
+from collections import defaultdict
 
 from aruco_lib import *
-from collections import defaultdict
 from port_detection import *
 
+########################
+## Setting color ranges
+########################
 LLG = (25, 62, 110)
 ULG = (76, 255, 255)
 LLR = ( 164, 150, 150)
@@ -73,6 +79,10 @@ def get_centre(contour):
     except ZeroDivisionError:
         return [0,0]
 
+############################
+## Function to get 
+## nodes from white contours
+#############################
 def get_nodes(pic):
     erosion_size = 3
     erosion_type = cv2.MORPH_CROSS
@@ -82,6 +92,10 @@ def get_nodes(pic):
     contourW,hW = cv2.findContours(maskW, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     return contourW
 
+#############################
+## Function to get calculate
+## angles wrt white centre
+#############################
 def calculate_angle(pt1, pt2, centre):
     angle = math.degrees(math.atan2(pt1[1] - centre[1], pt1[0] - centre[0]) -
     math.atan2(pt2[1] - centre[1], pt2[0] - centre[0]))
@@ -93,18 +107,11 @@ def calculate_angle(pt1, pt2, centre):
     return angle
 
 
-############################################
-## Build your algorithm in this function
-## ip_image: is the array of the input image
-## imshow helps you view that you have loaded
-## the corresponding image
-############################################
+######################################
+## Function to process the image and
+## return node sequence to follow
+######################################
 def process(ip_image):
-    ###########################
-    ## Your Code goes here
-    ###########################
-    angle = -1
-     
     pic = cv2.cvtColor(ip_image, cv2.COLOR_BGR2HSV)
     
     maskG = cv2.inRange(pic, LLG, ULG)
@@ -125,11 +132,6 @@ def process(ip_image):
     #print(det_aruco_list)
     aruco_centre = []
     if det_aruco_list:
-        #aruco_id = det_aruco_list.keys()
-        #for aid in aruco_id:
-            #corners = det_aruco_list.get(aid)
-        #cv2.circle(ip_image,tuple(corners[0]),1,(0,255,255),2)
-        #cv2.circle(ip_image,tuple(corners[1]),1,(255,0,255),2)
         robot_state = calculate_Robot_State(ip_image,det_aruco_list)
         ip_image = mark_Aruco(ip_image, det_aruco_list)
         keys = robot_state.keys()
@@ -202,7 +204,6 @@ def process(ip_image):
                     elif dist < min_dist:
                         red_node = num
                         min_dist = dist
-                    #print(str(num) + ":" + str(dist))
                 red_nodes.append(red_node)
 
             for node in red_nodes:
@@ -237,7 +238,6 @@ def process(ip_image):
                     elif dist < min_dist:
                         green_node = num
                         min_dist = dist
-                    #print(str(num) + ":" + str(dist))
                 green_nodes.append(green_node)
 
             for node in green_nodes:
@@ -254,7 +254,6 @@ def process(ip_image):
         else:
             print("Green coins not found!!!")
         node_seq = []
-        #node_seq.append(1)
         red_angle_seq = []
         green_angle_seq = defaultdict(int)
         for node, data in red_nodes_data.items():
@@ -291,7 +290,7 @@ def process(ip_image):
                     if angle == abs(data[1]):
                         node_seq.append(node)
 
-        #node_seq.append(1)
+        node_seq.append(0)
         #print(node_seq)
         '''
         command_seq = []
@@ -314,8 +313,6 @@ def process(ip_image):
         print("White centre not found!!!")
 
     cv2.imshow("Result", ip_image)
-    #angles.append(angle)
-    #op_image = ip_image
     return node_seq
     
     
@@ -339,12 +336,10 @@ def main():
     cap.set(4, 480)
     ## reading in the frame
     ret, frame = cap.read()
-    ## verifying frame has content
-    #print(frame.shape)
     while(ret):
         ret, frame = cap.read()
         ## display to see if the frame is correct
-        #cv2.imshow("window", frame)
+        cv2.imshow("window", frame)
         cv2.waitKey(int(1000/fps));
         ## calling the algorithm function
         node_seq = process(frame)
@@ -354,11 +349,17 @@ def main():
             try:
                 s = serial.Serial(port)
                 for node in node_seq:
-                    num = 0
-                    while num < 500:
+                    response = None
+                    while True:
                         s.write(str(node).encode("utf-8"))
-                    print(str(node) + "sent to Bot")
-                    response = s.read(1)
+                        print(str(node) + "sent to Bot")
+                        time.sleep(1)
+                        s.reset_input_buffer()
+                        s.reset_output_buffer()
+                        response = s.read(1)
+                        if response is not None:
+                            print(response)
+                            break
                 s.close()
             except (OSError, serial.SerialException):
                 pass

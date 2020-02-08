@@ -41,27 +41,17 @@ if __name__ == '__main__':
             print(s.get_settings())
             #s.reset_input_buffer()
             #s.reset_output_buffer()
-            #print(s.write(bytes('a'.encode("utf-8"))))
-            #ack = s.read(7).decode("utf-8")
-            #print(ack)
-            #if ack:
-            num = 0
-            on = True
             while True:
-                if on:
-                    num = 0
-                    while num < 500:
-                        s.write(bytes("a".encode("utf-8")))
-                        num = num + 1
-                    print("a Done")
-                    on = False
-                else:
-                    num = 0
-                    while num < 500:
-                        s.write(bytes("b".encode("utf-8")))
-                        num = num + 1
-                    print("b Done")
-                    on = True
+                s.write(
+            num = 0
+            ack = s.read(1).decode("utf-8")
+            print(ack)
+            if ack == 1:
+                while num < 10:
+                    s.write(bytes(str(num).encode("utf-8")))
+                    num = num + 1
+            else:
+                s.write(b'x')
             #res = s.read(1).decode("utf-8")
             #print(res)
             print(s.in_waiting)

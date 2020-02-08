@@ -332,7 +332,7 @@ def process(ip_image):
                     if angle == abs(data[1]):
                         node_seq.append(node)
         
-        #node_seq.append(1)
+        node_seq.append(0)
         #print(node_seq)
         '''
         command_seq = []
@@ -354,7 +354,7 @@ def process(ip_image):
         print("White centre not found!!!")
 
     cv2.imshow("Result", ip_image)
-    cv2.waitKey(0);
+    #cv2.waitKey(0);
     #cv2.imwrite("../Generated/generated" + str(count + 1) + ".jpg", ip_image)
     ## Your Code goes here
     ###########################
@@ -393,8 +393,10 @@ def main():
                     num = 0
                     while num < 500:
                         s.write(str(node).encode("utf-8"))
-                    print(str(node) + "sent to Bot")
+                        num = num + 1
+                    print(str(node) + " sent to Bot")
                     response = s.read(1)
+                    print(response)
                 s.close()
             except (OSError, serial.SerialException):
                 pass
