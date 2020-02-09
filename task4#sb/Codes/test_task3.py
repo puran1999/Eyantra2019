@@ -4,7 +4,9 @@
 ## References:
 ## ArUCO Detection: aruco_lib provided by Eyantra Team
 ## Erosion: https://github.com/opencv/opencv/blob/3.4/samples/python/tutorial_code/imgProc/erosion_dilatation/morphology_1.py 
-## Pyserial: https://pythonhosted.org/pyserial/index.html 
+## Pyserial: https://pythonhosted.org/pyserial/index.html
+## Port Detection: Answer from https://stackoverflow.com/questions/12090503/listing-available-com-ports-with-python
+## Tabular Formating: Answer from https://stackoverflow.com/questions/9535954/printing-lists-as-tabular-data
 ###############################################################################
 
 ######################
@@ -18,6 +20,7 @@ import math
 #import copy
 import time
 from collections import defaultdict
+from prettytable import PrettyTable
 
 from aruco_lib import *
 from port_detection import *
@@ -113,7 +116,8 @@ def calculate_angle(pt1, pt2, centre):
 ######################################
 def process(ip_image):
     pic = cv2.cvtColor(ip_image, cv2.COLOR_BGR2HSV)
-    
+    table = PrettyTable(['Node Type','Node Number',])
+
     maskG = cv2.inRange(pic, LLG, ULG)
     maskR = cv2.inRange(pic, LLR, ULR)
     maskW = cv2.inRange(pic, LLW, ULW)
@@ -207,7 +211,8 @@ def process(ip_image):
                 red_nodes.append(red_node)
 
             for node in red_nodes:
-                print("Medical supply at: " + str(node))
+                #print("Medical supply at: " + str(node))
+                table.add_row(['Medical Aid', node])
                 for num, data in sorted(nodes.items()):
                     if num == node:
                         red_nodes_data[num] = data
@@ -241,7 +246,8 @@ def process(ip_image):
                 green_nodes.append(green_node)
 
             for node in green_nodes:
-                print("Food supply at: " + str(node))
+                #print("Food supply at: " + str(node))
+                table.add_row(['Food Supply', node])
                 for num, data in sorted(nodes.items()):
                     if num == node:
                         green_nodes_data[num] = data
@@ -312,6 +318,7 @@ def process(ip_image):
     else:
         print("White centre not found!!!")
 
+    print(table)
     cv2.imshow("Result", ip_image)
     return node_seq
     
@@ -352,7 +359,7 @@ def main():
                     response = None
                     while True:
                         s.write(str(node).encode("utf-8"))
-                        print(str(node) + "sent to Bot")
+                        print(str(node) + " sent to Bot")
                         time.sleep(1)
                         s.reset_input_buffer()
                         s.reset_output_buffer()

@@ -14,6 +14,7 @@ import os
 import math
 import csv
 from collections import defaultdict
+from prettytable import PrettyTable
 
 from aruco_lib import *
 from port_detection import *
@@ -140,6 +141,7 @@ def process(ip_image):
     ## Your Code goes here
     angle = -1
     pic = cv2.cvtColor(ip_image, cv2.COLOR_BGR2HSV)
+    t = PrettyTable(['Node Type', 'Node Number'])
 
     maskG = cv2.inRange(pic, LLG, ULG)
     maskR = cv2.inRange(pic, LLR, ULR)
@@ -247,7 +249,8 @@ def process(ip_image):
                 red_nodes.append(red_node)
             
             for node in red_nodes:
-                print("Medical supply at: " + str(node))
+                #print("Medical supply at: " + str(node))
+                t.add_row(['Medical Aid', node])
                 for num, data in sorted(nodes.items()):
                     if num == node:
                         red_nodes_data[num] = data
@@ -281,7 +284,8 @@ def process(ip_image):
                 green_nodes.append(green_node)
 
             for node in green_nodes:
-                print("Food supply at: " + str(node))
+                #print("Food supply at: " + str(node))
+                t.add_row(['Food Supply', node])
                 for num, data in sorted(nodes.items()):
                     if num == node:
                         green_nodes_data[num] = data
@@ -352,7 +356,7 @@ def process(ip_image):
         '''
     else:
         print("White centre not found!!!")
-
+    print(t)
     cv2.imshow("Result", ip_image)
     #cv2.waitKey(0);
     #cv2.imwrite("../Generated/generated" + str(count + 1) + ".jpg", ip_image)
