@@ -117,6 +117,7 @@ def calculate_angle(pt1, pt2, centre):
 def process(ip_image):
     pic = cv2.cvtColor(ip_image, cv2.COLOR_BGR2HSV)
     table = PrettyTable(['Node Type','Node Number',])
+    node_seq = []
 
     maskG = cv2.inRange(pic, LLG, ULG)
     maskR = cv2.inRange(pic, LLR, ULR)
