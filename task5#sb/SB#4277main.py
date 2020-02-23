@@ -1,13 +1,14 @@
-##############################################################################
-## Team SB#4277
-###############################################################################
-## References:
-## ArUCO Detection: aruco_lib provided by Eyantra Team
-## Erosion: https://github.com/opencv/opencv/blob/3.4/samples/python/tutorial_code/imgProc/erosion_dilatation/morphology_1.py 
-## Pyserial: https://pythonhosted.org/pyserial/index.html
-## Port Detection: Answer from https://stackoverflow.com/questions/12090503/listing-available-com-ports-with-python
-## Tabular Formating: Answer from https://stackoverflow.com/questions/9535954/printing-lists-as-tabular-data
-###############################################################################
+'''
+* Team Id : 4277
+* Author List : Sudhanshu Dubey, Puran Singh
+* Filename: SB#4277main.py
+* Theme: Supply Bot -- Specific to eYRC
+* Functions: find_correct_contours(list, string, list), get_centre(list),
+*            get_nodes(image), calculate_angle(list, list, list), process(image),
+*            main(), show(boolean, VideoCapture Object, float), communication()
+* Global Variables: node_sequence, Lower_limit_Green, Upper_limit_Green, Lower_limit_Red, 
+*                    Upper_limit_Red, Lower_limit_White, Upper_limit_White
+'''
 
 ######################
 ## Essential libraries
@@ -23,21 +24,28 @@ from threading import Thread
 from aruco_lib import *
 from port_detection import *
 
-########################
-## Setting color ranges
-########################
-LLG = (25, 62, 110)
-ULG = (76, 255, 255)
-LLR = ( 164, 150, 150)
-ULR = ( 180, 255, 255)
-LLW = ( 0, 0, 170)
-ULW = ( 180, 50, 255)
+# Global variables defining the colour ranges
+Lower_limit_Green = (25, 62, 110)
+Upper_limit_Green = (76, 255, 255)
+Lower_limit_Red = (164, 150, 150)
+Upper_limit_Red = (180, 255, 255)
+Lower_limit_White = (0, 0, 170)
+Upper_limit_White = (180, 50, 255)
+
+# Global variable to store the node sequence that the bot should travel.
 node_sequence = []
 
-###################################################
-## Function to pick the required contours from the 
-## detected ones.
-###################################################
+'''
+* Function Name: find_correct_contours
+* Input: contour -> The list of contours from which the required ones are to be
+*                 picked
+*        name -> The keyword specifying the type of contour
+*        im_shape -> Shape of the image or centre of frame.
+* Output: detected -> List of contours that pass the required tests
+* Logic: Function to pick the required contours from the detected ones.
+* Example Call: detected_contours = find_correct_contours(contours, 'G',
+* im_shape)
+'''
 def find_correct_contours(contour, name, im_shape):
     detected = []
     for cont in contour:
@@ -68,10 +76,14 @@ def find_correct_contours(contour, name, im_shape):
 
     return detected
 
-#######################
-## Function to get 
-## centre of contour
-#######################
+'''
+* Function Name: get_centre
+* Input: contour -> Contour for which centre is to be found 
+* Output: Returns list of centre coordinate in the [x, y] format 
+* Logic: Function to get the centre coordinates of a contour. It uses moments
+*        to find the centre. 
+* Example Call: centre = get_centre(contour_name) 
+'''
 def get_centre(contour):
     M = cv2.moments(contour)
     try:
@@ -81,23 +93,32 @@ def get_centre(contour):
     except ZeroDivisionError:
         return [0,0]
 
-############################
-## Function to get 
-## nodes from white contours
-#############################
+'''
+* Function Name: get_nodes
+* Input: pic -> Image from which nodes are to be found 
+* Output: contourW -> list of contours classified as nodes 
+* Logic: Function to get the list of nodes. It erodes the pic and then detects
+*        remaining white contours.
+* Example Call: node_contour = get_nodes(image) 
+'''
 def get_nodes(pic):
     erosion_size = 3
     erosion_type = cv2.MORPH_CROSS
     element = cv2.getStructuringElement(erosion_type, (2*erosion_size + 1, 2*erosion_size+1), (erosion_size, erosion_size))
     erosion_dst = cv2.erode(pic, element)
-    maskW = cv2.inRange(erosion_dst, LLW, ULW)
+    maskW = cv2.inRange(erosion_dst, Lower_limit_White, Upper_limit_White)
     contourW,hW = cv2.findContours(maskW, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     return contourW
 
-#############################
-## Function to get calculate
-## angles wrt white centre
-#############################
+'''
+* Function Name: calculate_angle
+* Input: pt1 -> point 1
+*        pt2 -> point 2
+*        centre -> contre point of angle 
+* Output: angle -> Calculated angles between point 1, point 2 w.r.t centre 
+* Logic: Function to calculate angle between given 2 points w.r.t given centre.
+* Example Call: angle = calculate_angle(pointA, pointB, centre) 
+'''
 def calculate_angle(pt1, pt2, centre):
     angle = math.degrees(math.atan2(pt1[1] - centre[1], pt1[0] - centre[0]) -
     math.atan2(pt2[1] - centre[1], pt2[0] - centre[0]))
@@ -108,19 +129,23 @@ def calculate_angle(pt1, pt2, centre):
     angle = round(angle,2)
     return angle
 
-
-######################################
-## Function to process the image and
-## return node sequence to follow
-######################################
+'''
+* Function Name: process
+* Input: ip_image -> Frame of the video to be processed
+* Output: node_seq -> A list of nodes to be followed by the bot
+* Logic: The function to process the frame and calculate the sequence of nodes
+*        to follow.
+* Example Call: seq = process(frame) 
+'''
 def process(ip_image):
+
     pic = cv2.cvtColor(ip_image, cv2.COLOR_BGR2HSV)
     table = PrettyTable(['Node Type','Node Number',])
     node_seq = []
 
-    maskG = cv2.inRange(pic, LLG, ULG)
-    maskR = cv2.inRange(pic, LLR, ULR)
-    maskW = cv2.inRange(pic, LLW, ULW)
+    maskG = cv2.inRange(pic, Lower_limit_Green, Upper_limit_Green)
+    maskR = cv2.inRange(pic, Lower_limit_Red, Upper_limit_Red)
+    maskW = cv2.inRange(pic, Lower_limit_White, Upper_limit_White)
     
     contourG,h=cv2.findContours(maskG, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     contourR,h=cv2.findContours(maskR, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
@@ -282,10 +307,16 @@ def process(ip_image):
     print(table)
     cv2.imshow("Result", ip_image)
     return node_seq
-    
+
+'''
+* Function Name: communication
+* Input: 
+* Output: Sends node numbers to bot sequentially. 
+* Logic: The function to communicate with the bot using serial module. 
+* Example Call: seq = communication() 
+'''   
 def communication():
     #time.sleep(20)
-    node_seq = [6, 0]
     ports = serial_ports()
     for port in ports:
         try:
@@ -309,7 +340,16 @@ def communication():
             s.close()
         except (OSError, serial.SerialException):
             pass
-
+'''
+* Function Name: show
+* Input: ret -> retrieval value telling if the frame is available or not.
+*        cap -> VideoCapture object containing the frame
+*        fps -> Frame per second rate
+* Output: Displays live capture of the frames.
+* Logic: The function to capture frame, display them and pass to process
+*        function
+* Example Call: show(ret, cap, fps)
+''' 
 def show(ret, cap, fps):
     while(ret):
         ret, frame = cap.read()
@@ -319,17 +359,15 @@ def show(ret, cap, fps):
         ## calling the algorithm function
         global node_sequence
         node_sequence = process(frame)
-
-####################################################################
-## The main program which provides read in input of one image at a
-## time to process function in which you will code your generalized
-## output computing code
-## Modify the image name as per instruction
-####################################################################
+'''
+* Function Name: main
+* Input:
+* Output:
+* Logic: The main function to read the frames and call show and communication
+*        functions in seperate threads.
+* Example Call: main() 
+''' 
 def main():
-    ################################################################
-    ## variable declarations
-    ################################################################
     i = 1
     ## reading in video 
     cap = cv2.VideoCapture(1) #if you have a webcam on your system, then change 0 to 1
