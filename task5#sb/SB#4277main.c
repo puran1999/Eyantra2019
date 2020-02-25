@@ -90,6 +90,13 @@ void adc_init(){
 	ADCSRA = ((1 << ADEN) |  (1 << ADPS2 | 1 << ADPS1)) ;
 }
 
+/*
+* Function Name: ADC_Conversion
+* Input: None
+* Output: Initializes ADC and switches off comparator.
+* Logic:
+* Example Call: ADC_Conversion();
+*/
 //converting analog values from white line sensor to digital. using left shift mode(ADLAR=1). using only higher 8 bits as lower bits won't make that big of a change.
 unsigned char ADC_Conversion(unsigned char Ch){
 	unsigned char a;
@@ -102,7 +109,13 @@ unsigned char ADC_Conversion(unsigned char Ch){
 	return a;
 }
 
-//initializing ADC pins to use for white line sensor
+/*
+* Function Name: adc_pin_config
+* Input: None
+* Output: Initializes ADC pins as input and sets them on floating.
+* Logic:
+* Example Call: adc_pin_config();
+*/
 void adc_pin_config (void){
 	DDRC &= ~(1 << PIN_ADCR); //set PORTC direction as input
 	DDRC &= ~(1 << PIN_ADCC);
@@ -112,6 +125,13 @@ void adc_pin_config (void){
 	PORTC &= ~(1 << PIN_ADCL);
 }
 
+/*
+* Function Name: timer2_init
+* Input: None
+* Output: Initializes timer 2.
+* Logic:
+* Example Call: timer2_init();
+*/
 //timer 2 used to generate pwm for both the motors. prescaler used =1028. fast pwm mode
 void timer2_init(){
 	cli();
@@ -135,6 +155,13 @@ void timer2_init(){
 	sei();
 }
 
+/*
+* Function Name: timer0_init
+* Input: None
+* Output: Initializes timer 0.
+* Logic:
+* Example Call: timer0_init();
+*/
 //timer 0 used to generate pwm for servomotor. prescaler used = 1024. fast pwm mode
 void timer0_init(){
 	cli();
@@ -157,27 +184,63 @@ void timer0_init(){
 	sei();
 }
 
+/*
+* Function Name: pwm_servomotor_init
+* Input: None
+* Output: 
+* Logic:
+* Example Call: pwm_servomotor_init();
+*/
 //initializing servomotor pins
 void pwm_servomotor_init(void){
 	DDRD    |= (1 << PD6);
 	PORTD   |= (1 << PD6);
 }
 
+
+/*
+* Function Name: servomotor_pwm
+* Input: None
+* Output:
+* Logic:
+* Example Call: servomotor_pwm(15);
+*/
 //setting pwm for servomotor
 void servomotor_pwm (unsigned char servo){
 	OCR0A = (unsigned char)servo;
 }
 
+/*
+* Function Name: servomotor_pwm
+* Input: None
+* Output:
+* Logic:
+* Example Call: servomotor_pwm(15);
+*/
 //setting pwm for outermotor
 void outermotor (unsigned char motor2){
 	OCR2A = (unsigned char)motor2;
 }
 
+/*
+* Function Name: servomotor_pwm
+* Input: None
+* Output:
+* Logic:
+* Example Call: servomotor_pwm(15);
+*/
 //setting pwm for innermotor
 void innermotor (unsigned char motor){
 	OCR2B =  (unsigned char)motor;
 }
 
+/*
+* Function Name: servomotor_pwm
+* Input: None
+* Output:
+* Logic:
+* Example Call: servomotor_pwm(15);
+*/
 //initializing timers and ADC
 void init_devices (void) {
 	timer2_init();
@@ -185,16 +248,36 @@ void init_devices (void) {
 	adc_init();
 }
 
-
+/*
+* Function Name: servomotor_pwm
+* Input: None
+* Output:
+* Logic:
+* Example Call: servomotor_pwm(15);
+*/
 void pwm_servomotor_stop(void){
 	PORTD   |= (1 << PD6);
 }
 
+/*
+* Function Name: servomotor_pwm
+* Input: None
+* Output:
+* Logic:
+* Example Call: servomotor_pwm(15);
+*/
 void timer0stop(void){
 	TCCR0B=0x00;
 	TCCR0A=0x00;
 }
 
+/*
+* Function Name: servomotor_pwm
+* Input: None
+* Output:
+* Logic:
+* Example Call: servomotor_pwm(15);
+*/
 //program to control servomotor for striking mechanism
 void striking(void){
 	timer0_init();
@@ -211,6 +294,13 @@ void striking(void){
 	timer0stop();
 }
 
+/*
+* Function Name: servomotor_pwm
+* Input: None
+* Output:
+* Logic:
+* Example Call: servomotor_pwm(15);
+*/
 //Buzzer program
 void buzzer(unsigned int x){
 	int i;
@@ -223,7 +313,13 @@ void buzzer(unsigned int x){
 	PORTC |= (1<<buzz);
 }
 
-//reading byte received on XBee
+/*
+* Function Name: servomotor_pwm
+* Input: None
+* Output:
+* Logic:
+* Example Call: servomotor_pwm(15);
+*/
 char uart0_readByte(void){
 	uint16_t rx;
 	uint8_t rx_status, rx_data;
@@ -240,6 +336,13 @@ char uart0_readByte(void){
 	}
 }
 
+/*
+* Function Name: servomotor_pwm
+* Input: None
+* Output:
+* Logic:
+* Example Call: servomotor_pwm(15);
+*/
 void antimotion_rotate(){
 	PORTB   |= (1 << in11);
 	PORTD   |= (1 << in22);
@@ -259,6 +362,13 @@ void antimotion_rotate(){
 	}
 }
 
+/*
+* Function Name: servomotor_pwm
+* Input: None
+* Output:
+* Logic:
+* Example Call: servomotor_pwm(15);
+*/
 void rotate(){	
 	motors_init();
 	PORTB   |= (1 << in12);
@@ -279,7 +389,13 @@ void rotate(){
 	}
 }
 
-
+/*
+* Function Name: servomotor_pwm
+* Input: None
+* Output:
+* Logic:
+* Example Call: servomotor_pwm(15);
+*/
 void move(int next_node, int direction )
 {
 	int node_counter = 0 , sens =0, b=1;
@@ -339,7 +455,13 @@ void move(int next_node, int direction )
 }
 	
 	
-	
+/*
+* Function Name: main
+* Input: None
+* Output:
+* Logic:
+* Example Call: servomotor_pwm(15);
+*/	
 int main(void) {
 	
 	int src = 1, final_des = 1;
