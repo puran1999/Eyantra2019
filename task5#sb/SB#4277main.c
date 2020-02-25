@@ -1,69 +1,90 @@
+/* 
+ * Team Id: 4277
+ * Author List: Jagmeet Singh
+ * Filename:  SB#4277main.c
+ * Theme:  Supply Bot
+ * Functions:  
+ * Global Variables: 
+ */  
+
 #define F_CPU 16000000UL
 #define USART0_ENABLED
 
 #include <avr/io.h>
 #include <util/delay.h>
-#include "uart.h"
 #include <stdlib.h>
 #include <avr/interrupt.h>
+#include "uart.h"
 
-#define PIN_ADCR			PC0
-#define PIN_ADCC			PC1
-#define PIN_ADCL			PC2
-#define in11				PB5
-#define in12				PB4
-#define in21				PD2
-#define in22				PD4
-#define pwm_servo			PD6
-#define pwm_motor1			PB3
-#define pwm_motor2			PD3
-#define buzz				PC3
+#define PIN_ADCR			PC0      //ADC pin to read analog values from right side of white line sensor  
+#define PIN_ADCC			PC1		 //ADC pin to read analog values from center of white line sensor  
+#define PIN_ADCL			PC2		 //ADC pin to read analog values from left side of white line sensor  
+#define in11				PB5		 //1st input pin for motor driver (outer motor) 
+#define in12				PB4		 //2nd input pin for motor driver (outer motor)
+#define in21				PD2		 //3rd input pin for motor driver (inner motor)
+#define in22				PD4		 //4th input pin for motor driver (inner motor)
+#define pwm_servo			PD6		 //PWM pin for servo motor
+#define pwm_motor1			PB3		 //ENA(enable pin of motor driver for inner motor - provides PWM)
+#define pwm_motor2			PD3		 //ENB(enable pin of motor driver for outer motor - provides PWM) 
+#define buzz				PC3		 //pin used to provide signal to buzzer
 
-//initializing motor pins
-void motor_init(void){
-	
-	DDRB    |= (1 << in11);//in1
-	DDRB    |= (1 << in12);//in1
+float ADC_ValueR, ADC_ValueC, ADC_ValueL,w ,ValueC;
+
+/*
+* Function Name: motors_init
+* Input: None
+* Output: Pins required for DC motors will be initialized.
+* Logic: For a pin to function as output, direction registers are used to assign value '1' 
+*		 to the pin to become an output pin.
+* Example Call: motors_init();
+*/
+void motors_init(void){	
+	DDRB    |= (1 << in11);
+	DDRB    |= (1 << in12);
 	DDRB    |= (1 << pwm_motor1);
-	DDRD    |= (1 << in21);//in2
-	DDRD    |= (1 << in22);//in2
-	DDRD    |= (1 << pwm_motor2);//pwm2
+	DDRD    |= (1 << in21);
+	DDRD    |= (1 << in22);
+	DDRD    |= (1 << pwm_motor2);
 }
 
-//pin values for motors to move in clockwise motion
-void clock(void){
-	
+/*
+* Function Name: forward_motion
+* Input: None
+* Output: The motors start to move in the forward direction.
+* Logic: Motor Driver works on concept of H-Bridge, on basis of which we move the status of one 
+*		 of input pins of each motor to HIGH which leads to motion in motor.
+* Example Call: forward_motion();
+*/
+void forward_motion(void){
 	PORTB   |= (1 << in11);
 	PORTB   &= ~(1 << in12);
-	PORTB   |= (1 << pwm_motor1);
 	PORTD   |= (1 << in21);
 	PORTD   &= ~(1 << in22);
-	PORTD   |= (1 << pwm_motor2);
 }
 
-//pin values to stop motors
-void motorsstop(void){
-	
+/*
+* Function Name: forward_motion
+* Input: None
+* Output: The motors start to move in the forward direction.
+* Logic: Motor Driver works on concept of H-Bridge, on basis of which we move the status of one
+*		 of input pins of each motor to HIGH which leads to motion in motor.
+* Example Call: forward_motion();
+*/
+void motors_stop(void){	
 	PORTB   &= ~(1 << in11);
 	PORTB   &= ~(1 << in12);
 	PORTD   &= ~(1 << in21);
 	PORTD   &= ~(1 << in22);
 }
 
-//pin values for motors to move in anticlockwise motion
-void anticlock(void){
-	
-	PORTB   &= ~(1 << in11);
-	PORTB   |= (1 << in12);
-	PORTB   |= (1 << pwm_motor1);
-	PORTD  &= ~(1 << in21);
-	PORTD   |= (1 << in22);
-	PORTD   |= (1 << pwm_motor2);
-}
-
-//switching off comparator and initialising ADC
+/*
+* Function Name: adc_init
+* Input: None
+* Output: Initializes ADC and switches off comparator.
+* Logic: 
+* Example Call: adc_init();
+*/
 void adc_init(){
-	
 	ACSR = (1 << ACD);
 	ADMUX = (1 << ADLAR);
 	ADCSRA = ((1 << ADEN) |  (1 << ADPS2 | 1 << ADPS1)) ;
@@ -71,7 +92,6 @@ void adc_init(){
 
 //converting analog values from white line sensor to digital. using left shift mode(ADLAR=1). using only higher 8 bits as lower bits won't make that big of a change.
 unsigned char ADC_Conversion(unsigned char Ch){
-	
 	unsigned char a;
 	Ch = Ch & 0b00000111;
 	ADMUX = 0x20 | Ch;
@@ -84,7 +104,6 @@ unsigned char ADC_Conversion(unsigned char Ch){
 
 //initializing ADC pins to use for white line sensor
 void adc_pin_config (void){
-	
 	DDRC &= ~(1 << PIN_ADCR); //set PORTC direction as input
 	DDRC &= ~(1 << PIN_ADCC);
 	DDRC &= ~(1 << PIN_ADCL);
@@ -94,8 +113,7 @@ void adc_pin_config (void){
 }
 
 //timer 2 used to generate pwm for both the motors. prescaler used =1028. fast pwm mode
-void timer2_init()
-{
+void timer2_init(){
 	cli();
 	TCCR2B = 0x00;
 	
@@ -118,8 +136,7 @@ void timer2_init()
 }
 
 //timer 0 used to generate pwm for servomotor. prescaler used = 1024. fast pwm mode
-void timer0_init()
-{
+void timer0_init(){
 	cli();
 	
 	TCCR0B = 0x00;
@@ -142,7 +159,6 @@ void timer0_init()
 
 //initializing servomotor pins
 void pwm_servomotor_init(void){
-	
 	DDRD    |= (1 << PD6);
 	PORTD   |= (1 << PD6);
 }
@@ -164,18 +180,14 @@ void innermotor (unsigned char motor){
 
 //initializing timers and ADC
 void init_devices (void) {
-	
 	timer2_init();
 	adc_pin_config();
 	adc_init();
-	
 }
 
 
-void pwm_servomotor_down(void){
-	
+void pwm_servomotor_stop(void){
 	PORTD   |= (1 << PD6);
-	
 }
 
 void timer0stop(void){
@@ -189,19 +201,18 @@ void striking(void){
 	pwm_servomotor_init();
 	servomotor_pwm(15);
 	_delay_ms(1500);
-	servomotor_pwm(5);
+	servomotor_pwm(4);
 	_delay_ms(800);
-	servomotor_pwm(60);
+	servomotor_pwm(55);
 	_delay_ms(1500);
 	servomotor_pwm(15);
 	_delay_ms(2000);
-	pwm_servomotor_down();
+	pwm_servomotor_stop();
 	timer0stop();
 }
 
 //Buzzer program
 void buzzer(unsigned int x){
-	
 	int i;
 	DDRC |= (1<<buzz);
 	PORTC &= ~(1<<buzz);
@@ -214,7 +225,6 @@ void buzzer(unsigned int x){
 
 //reading byte received on XBee
 char uart0_readByte(void){
-
 	uint16_t rx;
 	uint8_t rx_status, rx_data;
 
@@ -228,131 +238,209 @@ char uart0_readByte(void){
 	} else {
 		return - 1;
 	}
+}
 
+void antimotion_rotate(){
+	PORTB   |= (1 << in11);
+	PORTD   |= (1 << in22);
+	PORTB   &= ~(1 << in12);
+	PORTD   &= ~(1 << in21);
+	outermotor(255);
+	innermotor(255);
+	_delay_ms(300);
+	while(1)
+	{
+		ValueC = ADC_Conversion(1);		
+		if (ValueC<70 )
+		{
+			motors_stop();
+			break;
+		}
+	}
+}
+
+void rotate(){	
+	motors_init();
+	PORTB   |= (1 << in12);
+	PORTD   |= (1 << in21);
+	PORTB   &= ~(1 << in11);
+	PORTD   &= ~(1 << in22);
+	outermotor(255);
+	innermotor(255);
+	_delay_ms(100);
+	while(1)
+	{
+		ValueC = ADC_Conversion(1);	
+		if (ValueC<70 )
+		{ 
+			motors_stop();
+			break;
+		}
+	}
 }
 
 
-float ADC_ValueR, ADC_ValueC, ADC_ValueL,w ;
-int node_counter = 0, b = 1, sens=0;
-char strr[20];
-
+void move(int next_node, int direction )
+{
+	int node_counter = 0 , sens =0, b=1;
+	int outermotor_pwm, innermotor_pwm;
+	
+	if (direction==1)		//1=anticlock
+	{
+		outermotor_pwm =61;
+		innermotor_pwm=230;
+	}
+	else
+	{
+		outermotor_pwm =230;
+		innermotor_pwm=61;
+	}
+	while(1)
+	{		
+		ADC_ValueR = ADC_Conversion(0);
+		ADC_ValueC = ADC_Conversion(1);
+		ADC_ValueL = ADC_Conversion(2);
+		
+		w = ADC_ValueR - ADC_ValueL;
+		w*= 0.25;
+		
+		motors_init();
+		outermotor(outermotor_pwm - (w/2));
+		innermotor(innermotor_pwm + (w/2));
+		forward_motion();
+			
+		
+		sens = ADC_ValueL + ADC_ValueC + ADC_ValueR;
+		
+		
+		if ( b == 1 && sens < 250)
+		{
+			b = 0;
+			node_counter++;
+			if (node_counter == next_node)
+			{	
+				if (direction==1)
+				{
+					_delay_ms(800);
+				}
+				else
+				{
+					_delay_ms(200);	
+				}
+				motors_stop();
+				break;
+			}
+		}
+		else if( b == 0 && sens > 300)
+		{
+			b = 1;
+		}
+	}
+}
+	
+	
+	
 int main(void) {
 	
 	int src = 1, final_des = 1;
-	int des, diff, next;
+	int des, diff, next=3;
 	char rx_byte;
 	uart0_init(UART_BAUD_SELECT(9600, F_CPU));
 	uart0_flush();
 	init_devices();
 	
-	
-
 	while(1)
 	{
 		rx_byte = uart0_readByte();
 		uart0_putc('0');
-
-		if(rx_byte >= '1' && rx_byte <= '9'){
+	
+		
+		if(rx_byte >= '1' && rx_byte <= '9')
+		{
 			des= (int)rx_byte - 48 ;
 			diff = des - src  ;
-			if (diff < 0){
-				next =	diff + 9;
+			if (abs(diff) < 5)
+			{
+				next =	diff ;
 			}
-			else{
-				next = diff;
+			else if(diff>0) 
+			{
+				next =  diff -9 ;
 			}
+			else
+			{
+				next=diff+9;
+			}
+			
 			src = des;
 			
-			while(1){
-				ADC_ValueR = ADC_Conversion(0);
-				ADC_ValueC = ADC_Conversion(1);
-				ADC_ValueL = ADC_Conversion(2);
-				
-				w = ADC_ValueR - ADC_ValueL;
-				w*= 0.25;
-				
-				motor_init();
-				clock();
-				outermotor(180 - (w/2));//180
-				innermotor(48 + (w/2));	//48
-				
-				sens = ADC_ValueL + ADC_ValueC + ADC_ValueR;
-				
-				
-				if ( b == 1 && sens < 250)
-				{
-					b = 0;
-					node_counter++;
-					if (node_counter == next)
-					{
-						_delay_ms(200);
-						motorsstop();
-						_delay_ms(50);
-						buzzer(1);
-						_delay_ms(200);
-						buzzer(1);
-						striking();
-						_delay_ms(300);
-						buzzer(2);
-						node_counter = 0;
-						break;
-						
-					}
-				}
-				else if( b == 0 && sens > 300)
-				{
-					b = 1;
-				}
-				
-				
-			}
 			
+			while(1)
+			{	
+				if (next<0)
+				{
+					rotate();
+					move(abs(next),1);
+					antimotion_rotate();
+					_delay_ms(50);
+					buzzer(1);
+					_delay_ms(200);
+					buzzer(1);
+					striking();
+					_delay_ms(300);
+					buzzer(2);
+					break;
+				}
+				
+				else 
+				{
+					move(abs(next),0);
+					_delay_ms(50);
+					buzzer(1);
+					_delay_ms(200);
+					buzzer(1);
+					striking();
+					_delay_ms(300);
+					buzzer(2);
+					break;
+				}				
+			}			
 		}
 		
-		else if(rx_byte == '0'){
-			diff = final_des - src;
-			if (diff <0){
-				next =	diff +9 ;
+		else if(rx_byte == '0')
+		{
+					
+			diff = final_des - src  ;
+			if (abs(diff) < 5)
+			{
+				next =	diff ;
 			}
-			else{
-				next = diff;
+			else if(diff>0) 
+			{
+				next =  diff -9 ;
 			}
-			while(1){
-				ADC_ValueR = ADC_Conversion(0);
-				ADC_ValueC = ADC_Conversion(1);
-				ADC_ValueL = ADC_Conversion(2);
-				
-				w= ADC_ValueR - ADC_ValueL;
-				w*= 0.25;
-				
-				clock();
-				outermotor(180 - (w/2));//180
-				innermotor(48 + (w/2));	//48
-				
-				sens = ADC_ValueL + ADC_ValueC + ADC_ValueR;
-				
-				if ( b == 1 && sens < 250)
+			else
+			{
+				next=diff+9;
+			}
+			while(1)
+			{
+				if (next<0)
 				{
-					b = 0;
-					node_counter++;
-					if (node_counter == next)
-					{
-						motorsstop();
-						buzzer(10);
-						break;
-					}
-				}
-				else if( b == 0 && sens > 300)
+					rotate();
+					move(abs(next),1);
+					antimotion_rotate();
+					buzzer(10);
+					break;
+				}					
+				else
 				{
-					b = 1;
+					move(abs(next),0);
+					buzzer(10);
+					break;
 				}
 			}
-			
-		}
-		
-		
+		}		
 	}
-
 	return 0;
-	
 }
