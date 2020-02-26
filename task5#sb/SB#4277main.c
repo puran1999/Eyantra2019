@@ -464,24 +464,43 @@ void move(int next_node, int direction )
 */	
 int main(void) {
 	
-	int src = 1, final_des = 1;
-	int des, diff, next=3;
-	char rx_byte;
-	uart0_init(UART_BAUD_SELECT(9600, F_CPU));
-	uart0_flush();
-	init_devices();
+	int src = 1, final_des = 1;  //here src is source(the capital node in start), which 
+	//							   keeps on changing as the bot traverses. It is initialized as 1
+	//							   because starting capital node will always have node number 1. 
+	//							   final_des is used to store the value of capital node i.e. 1,
+	//							   final_des is used for return to capital after all
+	//							   aids have been served.
+	int des, diff, next;		 //here des is the destination node number received from
+	//							   the satellite. diff is the difference between destination node 
+	//							   and source node. next is the number of nodes(including destination node)
+	//							   bot needs to cross to reach the destination.
+	char rx_byte;				 //rx_byte is byte received from satellite  
+	uart0_init(UART_BAUD_SELECT(9600, F_CPU));  //Initializing UART at baud rate 9600
+	uart0_flush();								//clears input buffer
+	init_devices();								//function call to initialize ADC(for white line sensor) and 
+	//											  timer 2(for motors)
 	
 	while(1)
 	{
-		rx_byte = uart0_readByte();
-		uart0_putc('0');
-	
+		rx_byte = uart0_readByte();				//byte received is stored in rx_byte
+		uart0_putc('0');						//regularly transmitting 0 to receiver to keep connection intact,
+		//										  so that communication is not missed when satellite sends next node number. 
+		//										  This will only be running when bot needs location for the next city 
+		//										  to be serviced.
 		
-		if(rx_byte >= '1' && rx_byte <= '9')
+		if(rx_byte >= '1' && rx_byte <= '9')	//checking if byte received corresponds to any node number 
 		{
-			des= (int)rx_byte - 48 ;
-			diff = des - src  ;
-			if (abs(diff) < 5)
+			des= (int)rx_byte - 48 ;			//byte received is in char format so when type casted into int 
+			//									  it gives ASCII value, so 48 is deducted from that value to receive
+			//									  required node number. In ASCII,48 corresponds to 0 and so on till
+			//									  57 which corresponds to 9.
+			diff = des - src  ;					//diff is calculated as difference of destination and source node.
+			
+			//The below if, else if, else conditions calculate the number of nodes needed to be traveled to the city to be serviced.
+			//These conditions generate a value 'next' that depicts the number of nodes to be traveled and its sign depicts whether travel 
+			//should be in anticlockwise or clockwise direction according to the shortest possible. -(negative sign) means anticlockwise, and
+			//+(positive sign) shows clockwise movement.
+			if (abs(diff) < 5)					
 			{
 				next =	diff ;
 			}
@@ -494,27 +513,30 @@ int main(void) {
 				next=diff+9;
 			}
 			
-			src = des;
+			src = des;							//the destination node number is stored in variable source, so that it can be used to calculate next city to be served.
 			
 			
-			while(1)
+			while(1)							
 			{	
-				if (next<0)
+				if (next<0)						//if anticlockwise motion is shortest to go to node to be serviced, this condition is run
 				{
-					rotate();
-					move(abs(next),1);
-					antimotion_rotate();
+					rotate();					//bot rotates
+					move(abs(next),1);			//bot travels and reaches required node
+					antimotion_rotate();		//bot anti rotates
 					_delay_ms(50);
-					buzzer(1);
+					buzzer(1);					//buzzer is switched on for 0.5 second (first beep)
 					_delay_ms(200);
-					buzzer(1);
-					striking();
-					_delay_ms(300);
-					buzzer(2);
+					buzzer(1);					//buzzer is switched on for 0.5 second (in total 2 beeps, which means bot is going to service the node) 
+					striking();					//servomotor is started and rotated as such that it releases the loaded spring, which in turn pushes
+					//							  the striker to the coin (relief aid).The striking mechanism is a MECHANICAL STRUCTURE and its force is 
+					//							  adjusted by adjusting the spring, its force does not depend on the code.Code is just used to release 
+					//							  the loaded spring.  
+					_delay_ms(200);
+					buzzer(2);					//buzzer is beeped for for 1 second (meaning the node has been serviced)
 					break;
 				}
 				
-				else 
+				else							//if clockwise motion is shortest to go to node to be serviced, this condition is run
 				{
 					move(abs(next),0);
 					_delay_ms(50);
@@ -522,17 +544,18 @@ int main(void) {
 					_delay_ms(200);
 					buzzer(1);
 					striking();
-					_delay_ms(300);
+					_delay_ms(200);
 					buzzer(2);
 					break;
 				}				
 			}			
 		}
 		
-		else if(rx_byte == '0')
+		else if(rx_byte == '0')						//rx_byte=0 means that all services are done and bot needs
+		//											  to go back to capital node.
 		{
 					
-			diff = final_des - src  ;
+			diff = final_des - src  ;				//position of bot with respect to capital is calculated.
 			if (abs(diff) < 5)
 			{
 				next =	diff ;
@@ -547,18 +570,18 @@ int main(void) {
 			}
 			while(1)
 			{
-				if (next<0)
+				if (next<0)							//if anticlockwise motion is shortest to go to capital, this condition is run
 				{
-					rotate();
-					move(abs(next),1);
-					antimotion_rotate();
-					buzzer(10);
-					break;
+					rotate();						//bot rotates
+					move(abs(next),1);				//bot travels and reaches capital node
+					antimotion_rotate();			//bot anti rotates
+					buzzer(10);						//buzzer is switched on for 5 seconds
+					break;							
 				}					
-				else
+				else								//if clockwise motion is shortest to go to capital, this condition is run
 				{
-					move(abs(next),0);
-					buzzer(10);
+					move(abs(next),0);				//bot travels and reaches capital node
+					buzzer(10);						//buzzer is switched on for 5 seconds
 					break;
 				}
 			}
