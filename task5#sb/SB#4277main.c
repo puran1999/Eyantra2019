@@ -92,10 +92,12 @@ void adc_init(){
 
 /*
 * Function Name: ADC_Conversion
-* Input: None
+* Input:
 * Output: Initializes ADC and switches off comparator.
-* Logic:
-* Example Call: ADC_Conversion();
+* Logic: Analog values are measured by white line sensor ,which are converted to digital values using ADC. 328p has a 10 bit ADC.
+*		 Here, left shift mode is used which is activated by assigning 1 to ADLAR bit, therefore ADCH contains 8 higher bits which give values 
+*		 ranging from 0-255 according to readings from sensor. We don't read the lower 2 bits because they don't affect the result much. 
+* Example Call: ADC_Conversion(1);
 */
 //converting analog values from white line sensor to digital. using left shift mode(ADLAR=1). using only higher 8 bits as lower bits won't make that big of a change.
 unsigned char ADC_Conversion(unsigned char Ch){
@@ -187,11 +189,11 @@ void timer0_init(){
 /*
 * Function Name: pwm_servomotor_init
 * Input: None
-* Output: 
-* Logic:
+* Output: PWM pin for servomotor is initialized
+* Logic: direction registers are used to assign whether a pin is an input or output. If output, Port register is used to assign whether pin is low or high. 
+*		 If input, Port register is used to assign whether pull up register on pin is high or not.
 * Example Call: pwm_servomotor_init();
 */
-//initializing servomotor pins
 void pwm_servomotor_init(void){
 	DDRD    |= (1 << PD6);
 	PORTD   |= (1 << PD6);
@@ -200,48 +202,44 @@ void pwm_servomotor_init(void){
 
 /*
 * Function Name: servomotor_pwm
-* Input: None
-* Output:
-* Logic:
+* Input: 
+* Output: PWM output on specific pin PD6
+* Logic: 
 * Example Call: servomotor_pwm(15);
 */
-//setting pwm for servomotor
 void servomotor_pwm (unsigned char servo){
 	OCR0A = (unsigned char)servo;
 }
 
 /*
-* Function Name: servomotor_pwm
-* Input: None
-* Output:
+* Function Name: outermotor
+* Input: 
+* Output: PWM output on specific pin PD3
 * Logic:
-* Example Call: servomotor_pwm(15);
+* Example Call: outermotor(105);
 */
-//setting pwm for outermotor
 void outermotor (unsigned char motor2){
 	OCR2A = (unsigned char)motor2;
 }
 
 /*
-* Function Name: servomotor_pwm
-* Input: None
-* Output:
+* Function Name: innermotor
+* Input: 
+* Output: PWM output on specific pin PB3
 * Logic:
-* Example Call: servomotor_pwm(15);
+* Example Call: innermotor(105);
 */
-//setting pwm for innermotor
 void innermotor (unsigned char motor){
 	OCR2B =  (unsigned char)motor;
 }
 
 /*
-* Function Name: servomotor_pwm
+* Function Name: init_devices
 * Input: None
-* Output:
-* Logic:
-* Example Call: servomotor_pwm(15);
+* Output: Initializes timer2 and ADC
+* Logic: This function calls other functions which initialize timer2 and ADC by assigning specific values to concerned registers.
+* Example Call: init_devices();
 */
-//initializing timers and ADC
 void init_devices (void) {
 	timer2_init();
 	adc_pin_config();
@@ -260,11 +258,11 @@ void pwm_servomotor_stop(void){
 }
 
 /*
-* Function Name: servomotor_pwm
+* Function Name: timer0stop
 * Input: None
-* Output:
-* Logic:
-* Example Call: servomotor_pwm(15);
+* Output: Stops Timer 0
+* Logic: Registers used to initialize timer 0 are terminated by assigning 0 to them. 
+* Example Call: timer0stop();
 */
 void timer0stop(void){
 	TCCR0B=0x00;
@@ -272,13 +270,12 @@ void timer0stop(void){
 }
 
 /*
-* Function Name: servomotor_pwm
+* Function Name: striking
 * Input: None
-* Output:
-* Logic:
-* Example Call: servomotor_pwm(15);
+* Output: timer0 is switched on, PWM pin for servomotor is initialized, PWM signal is given to motor, loaded spring is released, spring is loaded again, timer0 is stopped so that it doesm't interfere with PWM of DC motors.
+* Logic: 
+* Example Call: striking();
 */
-//program to control servomotor for striking mechanism
 void striking(void){
 	timer0_init();
 	pwm_servomotor_init();
@@ -290,18 +287,17 @@ void striking(void){
 	_delay_ms(1500);
 	servomotor_pwm(15);
 	_delay_ms(2000);
-	pwm_servomotor_stop();
+	//pwm_servomotor_stop();
 	timer0stop();
 }
 
 /*
-* Function Name: servomotor_pwm
-* Input: None
-* Output:
+* Function Name: buzzer
+* Input: 
+* Output: beeps buzzer for required time
 * Logic:
-* Example Call: servomotor_pwm(15);
+* Example Call: buzzer(2);
 */
-//Buzzer program
 void buzzer(unsigned int x){
 	int i;
 	DDRC |= (1<<buzz);
@@ -314,11 +310,11 @@ void buzzer(unsigned int x){
 }
 
 /*
-* Function Name: servomotor_pwm
+* Function Name: uart0_readByte
 * Input: None
-* Output:
+* Output: returns byte received at input 
 * Logic:
-* Example Call: servomotor_pwm(15);
+* Example Call: uart0_readByte();
 */
 char uart0_readByte(void){
 	uint16_t rx;
@@ -337,11 +333,11 @@ char uart0_readByte(void){
 }
 
 /*
-* Function Name: servomotor_pwm
+* Function Name: antimotion_rotate
 * Input: None
-* Output:
+* Output: Bot rotates back 180 degree to make sure striking mechanism faces towards center.
 * Logic:
-* Example Call: servomotor_pwm(15);
+* Example Call: antimotion_rotate();
 */
 void antimotion_rotate(){
 	PORTB   |= (1 << in11);
@@ -363,11 +359,11 @@ void antimotion_rotate(){
 }
 
 /*
-* Function Name: servomotor_pwm
+* Function Name: rotate
 * Input: None
-* Output:
+* Output: Bot rotates 180 degree
 * Logic:
-* Example Call: servomotor_pwm(15);
+* Example Call: rotate();
 */
 void rotate(){	
 	motors_init();
@@ -390,11 +386,11 @@ void rotate(){
 }
 
 /*
-* Function Name: servomotor_pwm
-* Input: None
-* Output:
+* Function Name: move
+* Input: 
+* Output: Bot moves to the required node.
 * Logic:
-* Example Call: servomotor_pwm(15);
+* Example Call: move(2,1);
 */
 void move(int next_node, int direction )
 {
@@ -458,8 +454,8 @@ void move(int next_node, int direction )
 /*
 * Function Name: main
 * Input: None
-* Output:
-* Logic:
+* Output: 
+* Logic: 
 * Example Call: servomotor_pwm(15);
 */	
 int main(void) {
@@ -521,7 +517,7 @@ int main(void) {
 				if (next<0)						//if anticlockwise motion is shortest to go to node to be serviced, this condition is run
 				{
 					rotate();					//bot rotates
-					move(abs(next),1);			//bot travels and reaches required node
+					move(abs(next),1);			//bot travels and reaches required node, 1 here means anticlockwise direction
 					antimotion_rotate();		//bot anti rotates
 					_delay_ms(50);
 					buzzer(1);					//buzzer is switched on for 0.5 second (first beep)
@@ -538,7 +534,7 @@ int main(void) {
 				
 				else							//if clockwise motion is shortest to go to node to be serviced, this condition is run
 				{
-					move(abs(next),0);
+					move(abs(next),0);			//bot travels and reaches required node, 0 here means clockwise direction
 					_delay_ms(50);
 					buzzer(1);
 					_delay_ms(200);
@@ -573,14 +569,14 @@ int main(void) {
 				if (next<0)							//if anticlockwise motion is shortest to go to capital, this condition is run
 				{
 					rotate();						//bot rotates
-					move(abs(next),1);				//bot travels and reaches capital node
+					move(abs(next),1);				//bot travels and reaches capital node, 1 here means anticlockwise direction
 					antimotion_rotate();			//bot anti rotates
 					buzzer(10);						//buzzer is switched on for 5 seconds
 					break;							
 				}					
 				else								//if clockwise motion is shortest to go to capital, this condition is run
 				{
-					move(abs(next),0);				//bot travels and reaches capital node
+					move(abs(next),0);				//bot travels and reaches capital node, 0 here means clockwise direction
 					buzzer(10);						//buzzer is switched on for 5 seconds
 					break;
 				}
