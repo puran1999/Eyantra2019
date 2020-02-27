@@ -34,6 +34,7 @@ Upper_limit_White = (180, 50, 255)
 
 # Global variable to store the node sequence that the bot should travel.
 node_sequence = []
+loop = 0
 
 '''
 * Function Name: find_correct_contours
@@ -138,7 +139,7 @@ def calculate_angle(pt1, pt2, centre):
 * Example Call: seq = process(frame) 
 '''
 def process(ip_image):
-
+    global loop
     pic = cv2.cvtColor(ip_image, cv2.COLOR_BGR2HSV)
     table = PrettyTable(['Node Type','Node Number',])
     node_seq = []
@@ -234,7 +235,8 @@ def process(ip_image):
                     for centre in cR:
                         angleR = calculate_angle(centre, aruco_centre, cW)                    
             else:
-                print("Red coins not found!!!")
+                if loop != 1:
+                    print("Red coins not found!!!")
 
             if len(contourG) > 0:
                 cG = []
@@ -264,6 +266,9 @@ def process(ip_image):
                 if len(aruco_centre) > 0:
                     for centre in cG:
                         angleG = calculate_angle(centre, aruco_centre, cW)
+            else:
+                if loop != 1:
+                    print("Green coins not found!!!")
                     
             node_seq = []
             red_angle_seq = []
@@ -300,11 +305,15 @@ def process(ip_image):
 
             node_seq.append(0)
         else:
-            print("White centre not found!!!")
+            if loop != 1:
+                print("White centre not found!!!")
     else:
-        print("ArUCO not found!!!")
+        if loop != 1:
+            print("ArUCO not found!!!")
 
-    print(table)
+    if loop != 1:
+        loop = 1
+        print(table)
     cv2.imshow("Result", ip_image)
     return node_seq
 
